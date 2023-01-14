@@ -2,7 +2,7 @@
 
 import * as THREE from "three";
 import { Mesh } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 function main() {
   const canvas = document.querySelector("#c");

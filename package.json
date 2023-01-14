@@ -1,5 +1,18 @@
 {
+  "name": "treeEditor",
+  "version": "1.0.0",
+  "description": "",
+  "default": "index.html",
+  "scripts": {
+    "dev": "parcel index.html --port 2000",
+    "build": "rm -rf ./dist && parcel build index.html --dist-dir ./dist && cp -r ./resources ./dist/"
+  },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "three": "^0.147.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.8.0"
   }
 }
