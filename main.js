@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { Mesh } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { makeClipAdditive } from "three/src/animation/AnimationUtils";
 
 function main() {
   const canvas = document.querySelector("#c");
@@ -33,6 +34,17 @@ function main() {
   let ndx = 0;
   const z_axis = new THREE.Vector3(0, 0, 1);
 
+  const loader = new THREE.TextureLoader();
+  const leafGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+  const leafTexture = loader.load("resources/images/Leaf_Basecolor.png");
+  const leafMaterial = new THREE.MeshPhongMaterial({
+    map: leafTexture,
+    side: THREE.DoubleSide,
+    alphaTest: 0.6,
+  });
+  const total = 3000;
+  const leaf = new THREE.InstancedMesh(leafGeometry, leafMaterial, total);
+
   const renderPoint = function (x, y, z) {
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 3, 3),
@@ -59,7 +71,7 @@ function main() {
     return [vector.x, vector.y, vector.z];
   };
 
-  const makePositions = function (prevPlanePoints, curPlanePoints) {
+  const makeSidePositions = function (prevPlanePoints, curPlanePoints) {
     const l = curPlanePoints.length;
     for (let i = 0; i < l; i++) {
       let j = (i + 1) % l;
@@ -69,12 +81,55 @@ function main() {
         ...toArray(prevPlanePoints[i]),
         ...toArray(prevPlanePoints[j])
       );
-      uvs.push(1, 1, 0, 1, 1, 0, 0, 0);
-      indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
+      uvs.push(0, 1, 1, 1, 0, 0, 1, 0);
+      indices.push(ndx, ndx + 2, ndx + 1, ndx + 2, ndx + 3, ndx + 1);
       ndx += 4;
     }
   };
 
+  const makeTopPositions = function (curPlanePoints) {
+    const l = curPlanePoints.length;
+    for (let i = 0; i < l; i++) {
+      positions.push(...toArray(curPlanePoints[i]));
+    }
+    uvs.push(1, 1, 0, 1, 0, 0, 1, 0);
+    indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 3, ndx);
+    ndx += 4;
+  };
+
+  const getLeafPosition = function (points) {
+    const l = points.length;
+    const span = l / 3,
+      start = (l * 2) / 3;
+    const basePosition = points[Math.floor(Math.random() * span + start)];
+    return new THREE.Vector3(
+      basePosition.x + Math.random() * 3 - 1.5,
+      basePosition.y + Math.random() * 3 - 1.5,
+      basePosition.z + Math.random() * 3 - 1.5
+    );
+  };
+
+  const randomizeMatrix = function (points) {
+    const position = getLeafPosition(points);
+    const rotation = new THREE.Euler();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+
+    const matrix = new THREE.Matrix4();
+
+    rotation.x = Math.random() * 2 * Math.PI;
+    rotation.y = Math.random() * 2 * Math.PI;
+    rotation.z = Math.random() * 2 * Math.PI;
+
+    quaternion.setFromEuler(rotation);
+
+    scale.x = scale.y = scale.z = Math.random() * 0.2 + 0.8;
+
+    matrix.compose(position, quaternion, scale);
+    return matrix;
+  };
+
+  let cnt = 0;
   const buildTree = function (start, end, radius, depth, disturbRange = 3) {
     if (depth === 3) {
       return;
@@ -97,6 +152,14 @@ function main() {
     const offset = Math.floor(pointsLength / segment);
     let prevPlanePoints, curPlanePoints;
     let r = radius;
+
+    if (depth > 0)
+      for (let i = 0; i < 100; i++, cnt++) {
+        if (cnt < total) {
+          const matrix = randomizeMatrix(points);
+          leaf.setMatrixAt(cnt, matrix);
+        }
+      }
 
     // 获取一些枝干控制点
     for (let i = 0; i < pointsLength; i += offset) {
@@ -127,10 +190,11 @@ function main() {
       curPlanePoints = extractPoints(plane, cross, angle);
       // console.log(plane);
       if (prevPlanePoints) {
-        makePositions(prevPlanePoints, curPlanePoints);
+        makeSidePositions(prevPlanePoints, curPlanePoints);
       }
       prevPlanePoints = curPlanePoints;
     }
+    makeTopPositions(curPlanePoints);
 
     const branchNumber = 5;
     for (let i = 0; i < branchNumber; i++) {
@@ -149,18 +213,17 @@ function main() {
   buildTree(start, end, 1, 0);
 
   // console.log(positions);
-  console.log(uvs);
+  // console.log(uvs);
   // console.log(indices);
-  const loader = new THREE.TextureLoader();
-  const texture = loader.load("resources/images/Tree_Basecolor.png");
+
+  const treeTexture = loader.load("resources/images/Tree_Basecolor.png");
   const treeGeometry = new THREE.BufferGeometry();
-  const treeMaterial = new THREE.MeshPhongMaterial({
+  const treeMaterial = new THREE.MeshStandardMaterial({
     // wireframe: true,
     // color: "black",
-    map: texture,
-    side: THREE.DoubleSide,
+    map: treeTexture,
+    side: THREE.FrontSide,
   });
-
   const positionAttribute = new THREE.BufferAttribute(
     new Float32Array(positions),
     positionNumComponents
@@ -177,6 +240,8 @@ function main() {
 
   const tree = new Mesh(treeGeometry, treeMaterial);
   scene.add(tree);
+  scene.add(leaf);
+  console.log(cnt);
 
   // compute the box that contains all the stuff from root and below
   const box = new THREE.Box3().setFromObject(tree);
