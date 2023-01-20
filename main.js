@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { TreeBuilder } from "./treeBuilder";
+import { TreeBuilder } from "./TreeBuilder";
 
 function main() {
   const canvas = document.querySelector("#c");
