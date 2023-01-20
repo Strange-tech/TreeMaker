@@ -1,14 +1,14 @@
 "use strict";
 
 import * as THREE from "three";
-import { Mesh } from "three";
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { makeClipAdditive } from "three/src/animation/AnimationUtils";
+import { TreeBuilder } from "./treeBuilder";
 
 function main() {
   const canvas = document.querySelector("#c");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  // renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.setClearColor(0xffffff, 1.0);
 
   const scene = new THREE.Scene();
@@ -16,7 +16,7 @@ function main() {
   const fov = 45;
   const aspect = 2;
   const near = 0.1;
-  const far = 1000;
+  const far = 5000;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 10, 0);
@@ -25,234 +25,91 @@ function main() {
   controls.target.set(0, 10, 0);
   controls.update();
 
-  const positions = [],
-    indices = [],
-    uvs = [];
-  const positionNumComponents = 3;
-  const uvNumComponents = 2;
-
-  let ndx = 0;
-  const z_axis = new THREE.Vector3(0, 0, 1);
-
-  const loader = new THREE.TextureLoader();
-  const leafGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
-  const leafTexture = loader.load("resources/images/Leaf_Basecolor.png");
-  const leafMaterial = new THREE.MeshPhongMaterial({
-    map: leafTexture,
-    side: THREE.DoubleSide,
-    alphaTest: 0.6,
-  });
-  const total = 3000;
-  const leaf = new THREE.InstancedMesh(leafGeometry, leafMaterial, total);
-
-  const renderPoint = function (x, y, z) {
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 3, 3),
-      new THREE.MeshBasicMaterial({ color: "red" })
-    );
-    sphere.position.set(x, y, z);
-    scene.add(sphere);
+  // tree object 格式说明
+  const treeObj = {
+    name: "Platanus orientalis L.",
+    depth: 5,
+    disturbRange: 3,
+    segment: 5,
+    leaves: {
+      total: 15000, // 只多不少
+      each: 20,
+    },
+    branches: [
+      // root node
+      {
+        start: new THREE.Vector3(0, 0, 0),
+        end: new THREE.Vector3(0, 40, 0),
+        radius: 5,
+        fork: { min: 0.8, max: 0.9 },
+      },
+      // middle node
+      {
+        number: 3,
+        length: { min: 50, max: 60 },
+        fork: { min: 0.8, max: 0.9 },
+      },
+      {
+        number: 3,
+        length: { min: 45, max: 55 },
+        fork: { min: 0.25, max: 0.9 },
+      },
+      {
+        number: 4,
+        length: { min: 30, max: 40 },
+        fork: { min: 0.5, max: 1 },
+      },
+      {
+        number: 4,
+        length: { min: 20, max: 30 },
+        fork: { min: 0.25, max: 1 },
+      },
+      // leaf node
+      {
+        number: 5,
+        length: { min: 5, max: 10 },
+      },
+    ],
   };
 
-  const extractPoints = function (plane, axis, angle) {
-    const array = [];
-    const localPositions = plane.array; // array of vector3
-    const worldPositon = plane.position; // vector3
-    const l = localPositions.length;
-    for (let i = 0; i < l; i++) {
-      array.push(
-        localPositions[i].applyAxisAngle(axis, angle).add(worldPositon)
-      );
-    }
-    return array;
-  };
-
-  const toArray = function (vector) {
-    return [vector.x, vector.y, vector.z];
-  };
-
-  const makeSidePositions = function (prevPlanePoints, curPlanePoints) {
-    const l = curPlanePoints.length;
-    for (let i = 0; i < l; i++) {
-      let j = (i + 1) % l;
-      positions.push(
-        ...toArray(curPlanePoints[i]),
-        ...toArray(curPlanePoints[j]),
-        ...toArray(prevPlanePoints[i]),
-        ...toArray(prevPlanePoints[j])
-      );
-      uvs.push(0, 1, 1, 1, 0, 0, 1, 0);
-      indices.push(ndx, ndx + 2, ndx + 1, ndx + 2, ndx + 3, ndx + 1);
-      ndx += 4;
-    }
-  };
-
-  const makeTopPositions = function (curPlanePoints) {
-    const l = curPlanePoints.length;
-    for (let i = 0; i < l; i++) {
-      positions.push(...toArray(curPlanePoints[i]));
-    }
-    uvs.push(1, 1, 0, 1, 0, 0, 1, 0);
-    indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 3, ndx);
-    ndx += 4;
-  };
-
-  const getLeafPosition = function (points) {
-    const l = points.length;
-    const span = l / 3,
-      start = (l * 2) / 3;
-    const basePosition = points[Math.floor(Math.random() * span + start)];
-    return new THREE.Vector3(
-      basePosition.x + Math.random() * 3 - 1.5,
-      basePosition.y + Math.random() * 3 - 1.5,
-      basePosition.z + Math.random() * 3 - 1.5
-    );
-  };
-
-  const randomizeMatrix = function (points) {
-    const position = getLeafPosition(points);
-    const rotation = new THREE.Euler();
-    const quaternion = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-
-    const matrix = new THREE.Matrix4();
-
-    rotation.x = Math.random() * 2 * Math.PI;
-    rotation.y = Math.random() * 2 * Math.PI;
-    rotation.z = Math.random() * 2 * Math.PI;
-
-    quaternion.setFromEuler(rotation);
-
-    scale.x = scale.y = scale.z = Math.random() * 0.2 + 0.8;
-
-    matrix.compose(position, quaternion, scale);
-    return matrix;
-  };
-
-  let cnt = 0;
-  const buildTree = function (start, end, radius, depth, disturbRange = 3) {
-    if (depth === 3) {
-      return;
-    }
-    radius = radius <= 0.125 ? 0.125 : radius;
-    const mid = new THREE.Vector3(
-      (start.x + end.x) / 2 + Math.random() * 2 * disturbRange - disturbRange,
-      (start.y + end.y) / 2 + Math.random() * 2 * disturbRange - disturbRange,
-      (start.z + end.z) / 2 + Math.random() * 2 * disturbRange - disturbRange
-    );
-    const curve = new THREE.CatmullRomCurve3([start, mid, end]);
-    const points = curve.getPoints(50);
-    // const branchGeometry = new THREE.BufferGeometry().setFromPoints(points);
-    // const branchMaterial = new THREE.LineBasicMaterial({ color: "green" });
-    // const branch = new THREE.Line(branchGeometry, branchMaterial);
-    // scene.add(branch);
-
-    const pointsLength = points.length;
-    const segment = 10; // 树干控制点的个数
-    const offset = Math.floor(pointsLength / segment);
-    let prevPlanePoints, curPlanePoints;
-    let r = radius;
-
-    if (depth > 0)
-      for (let i = 0; i < 100; i++, cnt++) {
-        if (cnt < total) {
-          const matrix = randomizeMatrix(points);
-          leaf.setMatrixAt(cnt, matrix);
-        }
-      }
-
-    // 获取一些枝干控制点
-    for (let i = 0; i < pointsLength; i += offset) {
-      const controlPoint = points[i];
-      // renderPoint(controlPoint.x, controlPoint.y, controlPoint.z);
-
-      const tangent = new THREE.Vector3();
-      curve.getTangent(i / (pointsLength - 1), tangent);
-      const angle = tangent.angleTo(z_axis); // 弧度
-      const cross = new THREE.Vector3(); // 叉乘得到的向量，作为旋转轴
-      cross.crossVectors(z_axis, tangent).normalize();
-
-      const plane = {
-        position: new THREE.Vector3(
-          controlPoint.x,
-          controlPoint.y,
-          controlPoint.z
-        ),
-        array: [
-          new THREE.Vector3(r, r, 0),
-          new THREE.Vector3(-r, r, 0),
-          new THREE.Vector3(-r, -r, 0),
-          new THREE.Vector3(r, -r, 0),
-        ],
-      };
-      r *= 0.9;
-
-      curPlanePoints = extractPoints(plane, cross, angle);
-      // console.log(plane);
-      if (prevPlanePoints) {
-        makeSidePositions(prevPlanePoints, curPlanePoints);
-      }
-      prevPlanePoints = curPlanePoints;
-    }
-    makeTopPositions(curPlanePoints);
-
-    const branchNumber = 5;
-    for (let i = 0; i < branchNumber; i++) {
-      const s = points[Math.floor(Math.random() * pointsLength)];
-      const e = new THREE.Vector3(
-        s.x + Math.random() * 40 - 20,
-        s.y + 10,
-        s.z + Math.random() * 40 - 20
-      );
-      buildTree(s, e, radius / 2, depth + 1);
-    }
-  };
-
-  const start = new THREE.Vector3(0, 0, 0);
-  const end = new THREE.Vector3(0, 50, 0);
-  buildTree(start, end, 1, 0);
-
-  // console.log(positions);
-  // console.log(uvs);
-  // console.log(indices);
-
-  const treeTexture = loader.load("resources/images/Tree_Basecolor.png");
-  const treeGeometry = new THREE.BufferGeometry();
-  const treeMaterial = new THREE.MeshStandardMaterial({
-    // wireframe: true,
-    // color: "black",
-    map: treeTexture,
-    side: THREE.FrontSide,
-  });
-  const positionAttribute = new THREE.BufferAttribute(
-    new Float32Array(positions),
-    positionNumComponents
+  const builder = new TreeBuilder(
+    scene,
+    treeObj,
+    "resources/images/Tree_Basecolor.png",
+    "resources/images/Leaf_Basecolor.png"
   );
-  const uvAttribute = new THREE.BufferAttribute(
-    new Float32Array(uvs),
-    uvNumComponents
-  );
-  treeGeometry.setAttribute("position", positionAttribute);
-  treeGeometry.computeVertexNormals();
-  treeGeometry.setAttribute("uv", uvAttribute);
+  // console.log(builder.getCnt());
+  for (let i = 0; i < 10; i++) {
+    const tree = builder.build();
+    tree.position.set(i * 300 - 1300, 0, 0);
+    scene.add(tree);
+    builder.clear();
+  }
 
-  treeGeometry.setIndex(indices);
-
-  const tree = new Mesh(treeGeometry, treeMaterial);
-  scene.add(tree);
-  scene.add(leaf);
-  console.log(cnt);
+  // gltf exporter
+  // setTimeout(() => {
+  //   const fileName = "output.gltf";
+  //   new GLTFExporter().parse(group, function (result) {
+  //     const myBlob = new Blob([JSON.stringify(result)], {
+  //       type: "text/plain",
+  //     });
+  //     let link = document.createElement("a");
+  //     link.href = URL.createObjectURL(myBlob);
+  //     link.download = fileName;
+  //     link.click();
+  //   });
+  // }, 2000);
 
   // compute the box that contains all the stuff from root and below
-  const box = new THREE.Box3().setFromObject(tree);
-  const boxSize = box.getSize(new THREE.Vector3()).length();
-  const boxCenter = box.getCenter(new THREE.Vector3());
-  // set the camera to frame the box
-  frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
-  // update the Trackball controls to handle the new size
-  controls.maxDistance = boxSize * 10;
-  controls.target.copy(boxCenter);
-  controls.update();
+  // const box = new THREE.Box3().setFromObject(tree);
+  // const boxSize = box.getSize(new THREE.Vector3()).length();
+  // const boxCenter = box.getCenter(new THREE.Vector3());
+  // // set the camera to frame the box
+  // frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+  // // update the Trackball controls to handle the new size
+  // controls.maxDistance = boxSize * 10;
+  // controls.target.copy(boxCenter);
+  // controls.update();
 
   function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
     const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
@@ -281,22 +138,22 @@ function main() {
 
   {
     // 参考平面
-    const planeSize = 40;
-    const loader = new THREE.TextureLoader();
-    const texture = loader.load("resources/images/checker.png");
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.magFilter = THREE.NearestFilter;
-    const repeats = planeSize / 2;
-    texture.repeat.set(repeats, repeats);
-    const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
-    const planeMat = new THREE.MeshPhongMaterial({
-      map: texture,
-      side: THREE.DoubleSide, // 双面材质
-    });
-    const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.rotation.x = Math.PI * -0.5;
-    scene.add(mesh);
+    // const planeSize = 40;
+    // const loader = new THREE.TextureLoader();
+    // const texture = loader.load("resources/images/checker.png");
+    // texture.wrapS = THREE.RepeatWrapping;
+    // texture.wrapT = THREE.RepeatWrapping;
+    // texture.magFilter = THREE.NearestFilter;
+    // const repeats = planeSize / 2;
+    // texture.repeat.set(repeats, repeats);
+    // const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
+    // const planeMat = new THREE.MeshPhongMaterial({
+    //   map: texture,
+    //   side: THREE.DoubleSide, // 双面材质
+    // });
+    // const mesh = new THREE.Mesh(planeGeo, planeMat);
+    // mesh.rotation.x = Math.PI * -0.5;
+    // scene.add(mesh);
   }
 
   function resizeRendererToDisplaySize(renderer) {
