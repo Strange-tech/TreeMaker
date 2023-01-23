@@ -133,9 +133,9 @@ class TreeBuilder {
   }
 
   buildTreeRecursive(start, end, radius, depth, disturbRange) {
-    if (depth > this.treeObj.depth) {
-      return;
-    }
+    if (depth > this.treeObj.depth) return;
+    if (depth === this.treeObj.depth) disturbRange = 0;
+
     radius = radius <= 0.125 ? 0.125 : radius;
     const mid = new THREE.Vector3(
       (start.x + end.x) / 2 + Math.random() * 2 * disturbRange - disturbRange,

@@ -56,7 +56,7 @@ function main() {
       },
       {
         number: 4,
-        length: { min: 30, max: 40 },
+        length: { min: 20, max: 30 },
         fork: { min: 0.5, max: 1 },
       },
       {
@@ -81,7 +81,7 @@ function main() {
   // console.log(builder.getCnt());
   for (let i = 0; i < 10; i++) {
     const tree = builder.build();
-    tree.position.set(i * 300 - 1300, 0, 0);
+    tree.position.set(i * 250 - 1000, 0, 0);
     scene.add(tree);
     builder.clear();
   }
