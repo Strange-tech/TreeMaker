@@ -21,6 +21,10 @@ class TreeBuilder {
     this.z_axis = new THREE.Vector3(0, 0, 1); // 世界坐标下的z轴
   }
 
+  addConvex(convex) {
+    this.convex = convex;
+  }
+
   clear() {
     this.positions = [];
     this.indices = [];
@@ -122,7 +126,7 @@ class TreeBuilder {
 
     quaternion.setFromEuler(rotation);
 
-    scale.x = scale.y = scale.z = Math.random() + 2;
+    scale.x = scale.y = scale.z = Math.random() + 5;
 
     matrix.compose(position, quaternion, scale);
     return matrix;
@@ -202,7 +206,7 @@ class TreeBuilder {
 
     const cur_node = this.treeObj.branches[depth],
       next_node = this.treeObj.branches[depth + 1];
-    if (!next_node) return;
+    if (!next_node) return; // 剪了
 
     const fork_min = cur_node.fork.min,
       fork_max = cur_node.fork.max,
@@ -221,12 +225,24 @@ class TreeBuilder {
         .normalize();
 
       const s = points[base];
-      const e = new THREE.Vector3().addVectors(
-        s,
-        dir_vector.multiplyScalar(
-          randomRangeLinear(branchLength.min, branchLength.max)
-        )
-      );
+      let min_vector_length = branchLength.min,
+        max_vector_length = branchLength.max;
+      let end_point;
+      if (this.convex) {
+        const ray = new THREE.Raycaster(s, dir_vector);
+        const target = ray.intersectObject(this.convex, false);
+        console.log(target);
+        // if (target.length === 0) return; // 直接剪枝剪掉算了
+        end_point = target[0]?.point;
+      }
+      const e = end_point
+        ? end_point
+        : new THREE.Vector3().addVectors(
+            s,
+            dir_vector.multiplyScalar(
+              randomRangeLinear(min_vector_length, max_vector_length)
+            )
+          );
       this.buildTreeRecursive(s, e, radius / 2, depth + 1, disturbRange);
     }
   }

@@ -3,6 +3,8 @@
 import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
+import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 import { TreeBuilder } from "./TreeBuilder";
 
 function main() {
@@ -29,7 +31,7 @@ function main() {
   const treeObj = {
     name: "Platanus orientalis L.",
     depth: 5,
-    disturbRange: 3,
+    disturbRange: 10,
     segment: 5,
     leaves: {
       total: 15000, // 只多不少
@@ -39,34 +41,34 @@ function main() {
       // root node
       {
         start: new THREE.Vector3(0, 0, 0),
-        end: new THREE.Vector3(0, 40, 0),
-        radius: 5,
-        fork: { min: 0.8, max: 0.9 },
+        end: new THREE.Vector3(0, 150, 0),
+        radius: 6,
+        fork: { min: 0.5, max: 0.9 },
       },
       // middle node
       {
-        number: 3,
+        number: 6,
         length: { min: 50, max: 60 },
-        fork: { min: 0.8, max: 0.9 },
+        fork: { min: 0.5, max: 0.9 },
       },
       {
         number: 3,
         length: { min: 45, max: 55 },
-        fork: { min: 0.25, max: 0.9 },
+        fork: { min: 0.5, max: 0.9 },
       },
       {
-        number: 4,
+        number: 3,
         length: { min: 20, max: 30 },
         fork: { min: 0.5, max: 1 },
       },
       {
-        number: 4,
+        number: 3,
         length: { min: 20, max: 30 },
-        fork: { min: 0.25, max: 1 },
+        fork: { min: 0, max: 1 },
       },
       // leaf node
       {
-        number: 5,
+        number: 3,
         length: { min: 5, max: 10 },
       },
     ],
@@ -78,13 +80,55 @@ function main() {
     "resources/images/Tree_Basecolor.png",
     "resources/images/Leaf_Basecolor.png"
   );
+
+  const loader = new PCDLoader();
+  loader.load(
+    "resources/urban3d/cambridge_block_4 - Cloud.pcd",
+    function (points) {
+      points.geometry.center();
+      points.geometry.rotateX(-Math.PI / 2);
+      // scene.add(points);
+      const vectors = extract(points.geometry.attributes.position, 200);
+      const geometry = new ConvexGeometry(vectors);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        side: THREE.BackSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.scale.set(15, 15, 15);
+      mesh.position.set(0, 200, 0);
+      mesh.updateMatrixWorld();
+      // scene.add(mesh);
+
+      builder.addConvex(mesh);
+      const tree = builder.build();
+      scene.add(tree);
+      lookAt(tree);
+      render();
+    }
+  );
+
+  // const geometry = new THREE.SphereGeometry(80, 80, 80);
+  // const material = new THREE.MeshBasicMaterial({
+  //   color: 0x00ff00,
+  //   wireframe: true,
+  //   side: THREE.BackSide,
+  // });
+  // const mesh = new THREE.Mesh(geometry, material);
+  // mesh.position.set(0, 80, 0);
+  // mesh.updateMatrixWorld();
+  // scene.add(mesh);
+  // console.log(mesh);
+  // builder.addConvex(mesh);
+
   // console.log(builder.getCnt());
-  for (let i = 0; i < 10; i++) {
-    const tree = builder.build();
-    tree.position.set(i * 250 - 1000, 0, 0);
-    scene.add(tree);
-    builder.clear();
-  }
+  // for (let i = 0; i < 10; i++) {
+  // const tree = builder.build();
+  // tree.position.set(0, 0, 0);
+  // scene.add(tree);
+  // builder.clear();
+  // }
 
   // gltf exporter
   // setTimeout(() => {
@@ -100,16 +144,18 @@ function main() {
   //   });
   // }, 2000);
 
-  // compute the box that contains all the stuff from root and below
-  // const box = new THREE.Box3().setFromObject(tree);
-  // const boxSize = box.getSize(new THREE.Vector3()).length();
-  // const boxCenter = box.getCenter(new THREE.Vector3());
-  // // set the camera to frame the box
-  // frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
-  // // update the Trackball controls to handle the new size
-  // controls.maxDistance = boxSize * 10;
-  // controls.target.copy(boxCenter);
-  // controls.update();
+  function lookAt(obj) {
+    // compute the box that contains all the stuff from root and below
+    const box = new THREE.Box3().setFromObject(obj);
+    const boxSize = box.getSize(new THREE.Vector3()).length();
+    const boxCenter = box.getCenter(new THREE.Vector3());
+    // set the camera to frame the box
+    frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+    // update the Trackball controls to handle the new size
+    controls.maxDistance = boxSize * 10;
+    controls.target.copy(boxCenter);
+    controls.update();
+  }
 
   function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
     const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
@@ -154,6 +200,28 @@ function main() {
     // const mesh = new THREE.Mesh(planeGeo, planeMat);
     // mesh.rotation.x = Math.PI * -0.5;
     // scene.add(mesh);
+  }
+
+  function extract(positions, num) {
+    const array = positions.array;
+    const count = positions.count;
+    const offset = Math.floor(count / (num - 1));
+    const vectors = [];
+    for (let i = 0; i < count; i += offset) {
+      let j = i * 3;
+      vectors.push(new THREE.Vector3(array[j], array[j + 1], array[j + 2]));
+    }
+    return vectors;
+  }
+
+  function display(vectors) {
+    const geometry = new THREE.SphereGeometry(0.1);
+    const material = new THREE.MeshBasicMaterial({ color: "red" });
+    vectors.forEach((vector) => {
+      const sphere = new THREE.Mesh(geometry, material);
+      sphere.position.set(vector.x, vector.y, vector.z);
+      scene.add(sphere);
+    });
   }
 
   function resizeRendererToDisplaySize(renderer) {
