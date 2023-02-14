@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { randomRangeLinear } from "./utilities";
+import { randomRangeLinear, disturbedCurve } from "./utilities";
 /*************************************************************************************
  * CLASS NAME:  TreeBuilder
  * DESCRIPTION: A novel tree editor & generator on the webpage.
@@ -19,6 +19,7 @@ class TreeBuilder {
     this.cnt = 0; // 叶子计数器
     this.ndx = 0; // indices下标
     this.z_axis = new THREE.Vector3(0, 0, 1); // 世界坐标下的z轴
+    this.y_axis = new THREE.Vector3(0, 1, 0); // 世界坐标下的y轴
   }
 
   addConvex(convex) {
@@ -100,35 +101,48 @@ class TreeBuilder {
     this.ndx += 4;
   }
 
-  getLeafPosition(points) {
+  // getLeafPosition(points) {
+  //   const l = points.length;
+  //   const start = (l * 1) / 3,
+  //     end = l;
+  //   const basePosition = points[Math.floor(randomRangeLinear(start, end))];
+  //   return new THREE.Vector3(
+  //     basePosition.x + (Math.random() * 5 - 2.5) * 5,
+  //     basePosition.y + (Math.random() * 5 - 1.5) * 5,
+  //     basePosition.z + (Math.random() * 5 - 2.5) * 5
+  //   );
+  // }
+
+  randomizeMatrix(curve, points) {
     const l = points.length;
-    const start = (l * 1) / 3,
+    const start = (l * 1) / 10,
       end = l;
-    const basePosition = points[Math.floor(randomRangeLinear(start, end))];
-    return new THREE.Vector3(
-      basePosition.x + Math.random() * 5 - 2.5,
-      basePosition.y + Math.random() * 5 - 1.5,
-      basePosition.z + Math.random() * 5 - 2.5
+    const base = Math.floor(randomRangeLinear(start, end));
+    const basePosition = points[base];
+    const tan_vector = new THREE.Vector3(),
+      incre_vector = new THREE.Vector3().randomDirection();
+    curve.getTangent(base / (l - 1), tan_vector);
+    const dir_vector = new THREE.Vector3()
+      .addVectors(tan_vector, incre_vector)
+      .normalize();
+
+    const rot_angle = this.y_axis.angleTo(dir_vector);
+    const rot_axis = new THREE.Vector3()
+      .crossVectors(this.y_axis, dir_vector)
+      .normalize();
+
+    const trans = new THREE.Matrix4().makeTranslation(
+      basePosition.x,
+      basePosition.y,
+      basePosition.z
     );
-  }
+    const scl = new THREE.Matrix4().makeScale(20, 20, 20);
 
-  randomizeMatrix(points) {
-    const position = this.getLeafPosition(points);
-    const rotation = new THREE.Euler();
-    const quaternion = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-
+    const rot1 = new THREE.Matrix4().makeRotationY(Math.random() * 2 * Math.PI), // (0,2pi)
+      rot2 = new THREE.Matrix4().makeRotationAxis(rot_axis, rot_angle);
+    const rot = new THREE.Matrix4().multiply(rot2).multiply(rot1);
     const matrix = new THREE.Matrix4();
-
-    rotation.x = Math.random() * 2 * Math.PI;
-    rotation.y = Math.random() * 2 * Math.PI;
-    rotation.z = Math.random() * 2 * Math.PI;
-
-    quaternion.setFromEuler(rotation);
-
-    scale.x = scale.y = scale.z = Math.random() + 5;
-
-    matrix.compose(position, quaternion, scale);
+    matrix.multiply(trans).multiply(rot).multiply(scl);
     return matrix;
   }
 
@@ -136,17 +150,13 @@ class TreeBuilder {
     return this.cnt;
   }
 
-  buildTreeRecursive(start, end, radius, depth, disturbRange) {
+  buildTreeRecursive(start, end, radius, depth, disturb) {
     if (depth > this.treeObj.depth) return;
-    if (depth === this.treeObj.depth) disturbRange = 0;
+    if (depth === this.treeObj.depth) disturb = 0;
 
-    radius = radius <= 0.125 ? 0.125 : radius;
-    const mid = new THREE.Vector3(
-      (start.x + end.x) / 2 + Math.random() * 2 * disturbRange - disturbRange,
-      (start.y + end.y) / 2 + Math.random() * 2 * disturbRange - disturbRange,
-      (start.z + end.z) / 2 + Math.random() * 2 * disturbRange - disturbRange
-    );
-    const curve = new THREE.CatmullRomCurve3([start, mid, end]);
+    radius = radius <= 0.1 ? 0.1 : radius;
+
+    const curve = disturbedCurve(start, end, disturb, this.treeObj.gravity);
     const points = curve.getPoints(50);
     // const branchGeometry = new THREE.BufferGeometry().setFromPoints(points);
     // const branchMaterial = new THREE.LineBasicMaterial({ color: "green" });
@@ -164,7 +174,7 @@ class TreeBuilder {
         total = this.treeObj.leaves.total;
       for (let i = 0; i < each; i++, this.cnt++) {
         if (this.cnt < total) {
-          const matrix = this.randomizeMatrix(points);
+          const matrix = this.randomizeMatrix(curve, points);
           this.leaf.setMatrixAt(this.cnt, matrix);
         }
       }
@@ -177,8 +187,10 @@ class TreeBuilder {
       const tangent = new THREE.Vector3();
       curve.getTangent(i / (pointsLength - 1), tangent);
       const angle = tangent.angleTo(this.z_axis); // 弧度
-      const cross = new THREE.Vector3(); // 叉乘得到的向量，作为旋转轴
-      cross.crossVectors(this.z_axis, tangent).normalize();
+      // 叉乘得到的向量，作为旋转轴
+      const cross = new THREE.Vector3()
+        .crossVectors(this.z_axis, tangent)
+        .normalize();
 
       const plane = {
         position: new THREE.Vector3(
@@ -193,7 +205,8 @@ class TreeBuilder {
           new THREE.Vector3(r, -r, 0),
         ],
       };
-      r *= 0.9;
+      if (depth !== 0 || this.treeObj.shrink.root)
+        r *= this.treeObj.shrink.single;
 
       curPlanePoints = this.extractPoints(plane, cross, angle);
       // console.log(plane);
@@ -213,37 +226,45 @@ class TreeBuilder {
       // 考虑下一级
       branchLength = next_node.length;
     const branchNumber = next_node.number;
+    let theta = this.treeObj.angle;
     for (let i = 0; i < branchNumber; i++) {
       const base = Math.floor(
         pointsLength * randomRangeLinear(fork_min, fork_max)
       );
       const tan_vector = new THREE.Vector3(),
-        incre_vector = new THREE.Vector3().randomDirection();
+        incre_vector = new THREE.Vector3()
+          .randomDirection()
+          .multiplyScalar(Math.sin(theta));
       curve.getTangent(base / (pointsLength - 1), tan_vector);
       const dir_vector = new THREE.Vector3()
         .addVectors(tan_vector, incre_vector)
         .normalize();
 
       const s = points[base];
-      let min_vector_length = branchLength.min,
-        max_vector_length = branchLength.max;
+      let min_length = branchLength.min,
+        max_length = branchLength.max;
       let end_point;
-      if (this.convex) {
+      if (this.convex && depth === this.treeObj.depth - 1) {
         const ray = new THREE.Raycaster(s, dir_vector);
         const target = ray.intersectObject(this.convex, false);
         console.log(target);
         // if (target.length === 0) return; // 直接剪枝剪掉算了
-        end_point = target[0]?.point;
+        if (target[0] && target[0].distance <= max_length)
+          end_point = target[0]?.point;
       }
       const e = end_point
         ? end_point
         : new THREE.Vector3().addVectors(
             s,
-            dir_vector.multiplyScalar(
-              randomRangeLinear(min_vector_length, max_vector_length)
-            )
+            dir_vector.multiplyScalar(randomRangeLinear(min_length, max_length))
           );
-      this.buildTreeRecursive(s, e, radius / 2, depth + 1, disturbRange);
+      this.buildTreeRecursive(
+        s,
+        e,
+        radius * this.treeObj.shrink.multi,
+        depth + 1,
+        disturb
+      );
     }
   }
 
@@ -254,12 +275,14 @@ class TreeBuilder {
 
     const loader = new THREE.TextureLoader();
     // leaf texture
-    const leafGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    const leafGeometry = new THREE.PlaneGeometry(1, 2, 1, 1);
+    leafGeometry.translate(0, 1, 0);
     const leafTexture = loader.load(leafBasecolor);
     const leafMaterial = new THREE.MeshPhongMaterial({
       map: leafTexture,
       side: THREE.DoubleSide,
-      alphaTest: 0.6,
+      alphaTest: 0.2,
+      // color: "green",
     });
     // leaf是instancedMesh，递归函数要用
     this.leaf = new THREE.InstancedMesh(
@@ -273,7 +296,7 @@ class TreeBuilder {
       trunk.end,
       trunk.radius,
       0,
-      treeObj.disturbRange
+      treeObj.disturb
     );
     // trunk and branch texture
     const treeTexture = loader.load(treeBasecolor);

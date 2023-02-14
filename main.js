@@ -29,42 +29,40 @@ function main() {
 
   // tree object 格式说明
   const treeObj = {
-    name: "Platanus orientalis L.",
-    depth: 5,
-    disturbRange: 10,
-    segment: 5,
+    name: "法国梧桐",
+    depth: 4,
+    disturb: 0.1,
+    gravity: 0,
+    shrink: { single: 0.9, multi: 0.6, root: false },
+    segment: 10,
+    angle: Math.PI / 4,
     leaves: {
-      total: 15000, // 只多不少
-      each: 20,
+      total: 3240,
+      each: 1,
     },
     branches: [
       // root node
       {
         start: new THREE.Vector3(0, 0, 0),
-        end: new THREE.Vector3(0, 150, 0),
-        radius: 6,
-        fork: { min: 0.5, max: 0.9 },
+        end: new THREE.Vector3(0, 10, 0),
+        radius: 3,
+        fork: { min: 0.6, max: 1 },
       },
       // middle node
       {
         number: 6,
         length: { min: 50, max: 60 },
-        fork: { min: 0.5, max: 0.9 },
+        fork: { min: 0.5, max: 1 },
       },
       {
         number: 3,
         length: { min: 45, max: 55 },
-        fork: { min: 0.5, max: 0.9 },
-      },
-      {
-        number: 3,
-        length: { min: 20, max: 30 },
         fork: { min: 0.5, max: 1 },
       },
       {
         number: 3,
         length: { min: 20, max: 30 },
-        fork: { min: 0, max: 1 },
+        fork: { min: 0.5, max: 1 },
       },
       // leaf node
       {
@@ -78,36 +76,36 @@ function main() {
     scene,
     treeObj,
     "resources/images/Tree_Basecolor.png",
-    "resources/images/Leaf_Basecolor.png"
+    "resources/images/Tree10_leaf_Basecolor.png"
   );
 
-  const loader = new PCDLoader();
-  loader.load(
-    "resources/urban3d/cambridge_block_4 - Cloud.pcd",
-    function (points) {
-      points.geometry.center();
-      points.geometry.rotateX(-Math.PI / 2);
-      // scene.add(points);
-      const vectors = extract(points.geometry.attributes.position, 200);
-      const geometry = new ConvexGeometry(vectors);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
-        wireframe: true,
-        side: THREE.BackSide,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.scale.set(15, 15, 15);
-      mesh.position.set(0, 200, 0);
-      mesh.updateMatrixWorld();
-      // scene.add(mesh);
+  // const loader = new PCDLoader();
+  // loader.load(
+  //   "resources/urban3d/cambridge_block_4 - Cloud.pcd",
+  //   function (points) {
+  //     points.geometry.center();
+  //     points.geometry.rotateX(-Math.PI / 2);
+  //     // scene.add(points);
+  //     const vectors = extract(points.geometry.attributes.position, 200);
+  //     const geometry = new ConvexGeometry(vectors);
+  //     const material = new THREE.MeshBasicMaterial({
+  //       color: 0x00ff00,
+  //       wireframe: true,
+  //       side: THREE.BackSide,
+  //     });
+  //     const mesh = new THREE.Mesh(geometry, material);
+  //     mesh.scale.set(15, 15, 15);
+  //     mesh.position.set(0, 200, 0);
+  //     mesh.updateMatrixWorld();
+  //     // scene.add(mesh);
 
-      builder.addConvex(mesh);
-      const tree = builder.build();
-      scene.add(tree);
-      lookAt(tree);
-      render();
-    }
-  );
+  //     builder.addConvex(mesh);
+  //     const tree = builder.build();
+  //     scene.add(tree);
+  //     lookAt(tree);
+  //     render();
+  //   }
+  // );
 
   // const geometry = new THREE.SphereGeometry(80, 80, 80);
   // const material = new THREE.MeshBasicMaterial({
@@ -122,13 +120,37 @@ function main() {
   // console.log(mesh);
   // builder.addConvex(mesh);
 
-  // console.log(builder.getCnt());
-  // for (let i = 0; i < 10; i++) {
-  // const tree = builder.build();
-  // tree.position.set(0, 0, 0);
-  // scene.add(tree);
-  // builder.clear();
-  // }
+  const buildConvex = function (geometry) {
+    let convex;
+    switch (geometry) {
+      case "sphere":
+        convex = new THREE.Mesh(
+          new THREE.SphereGeometry(18),
+          new THREE.MeshBasicMaterial({
+            color: "red",
+            wireframe: true,
+            side: THREE.BackSide,
+          })
+        );
+        convex.position.set(0, 20, 0);
+        convex.updateMatrixWorld();
+        break;
+      case "other":
+        //xxxx
+        break;
+      default:
+        break;
+    }
+    return convex;
+  };
+  const convex = buildConvex(treeObj.geometry);
+  if (convex) builder.addConvex(convex);
+  console.log(convex);
+  const tree = builder.build();
+  scene.add(tree);
+  lookAt(tree);
+
+  console.log(builder.getCnt());
 
   // gltf exporter
   // setTimeout(() => {
