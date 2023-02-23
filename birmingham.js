@@ -24,50 +24,6 @@ function main() {
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 10, 0);
 
-  const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, 10, 0);
-  controls.update();
-
-  const treeObj = new CustomizeTree().getTree("红枫");
-  const builder = new TreeBuilder(treeObj);
-  const tree = builder.build();
-  scene.add(tree);
-  lookAt(tree);
-  console.log(tree);
-  console.log(builder.getCnt());
-  builder.clear();
-
-  function lookAt(obj) {
-    // compute the box that contains all the stuff from root and below
-    const box = new THREE.Box3().setFromObject(obj);
-    const boxSize = box.getSize(new THREE.Vector3()).length();
-    const boxCenter = box.getCenter(new THREE.Vector3());
-    // set the camera to frame the box
-    frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
-    // update the Trackball controls to handle the new size
-    controls.maxDistance = boxSize * 10;
-    controls.target.copy(boxCenter);
-    controls.update();
-  }
-
-  function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
-    const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
-    const halfFovY = THREE.MathUtils.degToRad(camera.fov * 0.5);
-    const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
-    const direction = new THREE.Vector3()
-      .subVectors(camera.position, boxCenter)
-      .multiply(new THREE.Vector3(1, 0, 1))
-      .normalize();
-    // move the camera
-    camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
-    // pick some near and far values for the frustum that will contain the box.
-    camera.near = boxSize / 100;
-    camera.far = boxSize * 100;
-    camera.updateProjectionMatrix();
-    // point the camera to look at the center of the box
-    camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
-  }
-
   {
     const color = 0xffffff;
     const intensity = 1;
@@ -75,20 +31,64 @@ function main() {
     scene.add(light);
   }
 
-  function extract(positions, num) {
-    const array = positions.array;
-    const count = positions.count;
-    const offset = Math.floor(count / (num - 1));
-    const vectors = [];
-    for (let i = 0; i < count; i += offset) {
-      let j = i * 3;
-      vectors.push(new THREE.Vector3(array[j], array[j + 1], array[j + 2]));
+  const controls = new OrbitControls(camera, canvas);
+  controls.target.set(0, 10, 0);
+  controls.update();
+
+  const axesHelper = new THREE.AxesHelper(1000);
+  scene.add(axesHelper);
+
+  const plainGeometry = new THREE.PlaneGeometry(4000, 2500, 100, 60);
+  plainGeometry.rotateX(-Math.PI / 2);
+  const plain = new THREE.Mesh(
+    plainGeometry,
+    new THREE.MeshPhongMaterial({
+      wireframe: true,
+      color: "green",
+    })
+  );
+  scene.add(plain);
+
+  // tree object 格式说明
+  const treeObj = new CustomizeTree().getTree("国槐");
+
+  const builder = new TreeBuilder(
+    scene,
+    treeObj,
+    "resources/images/Tree_Basecolor.png",
+    "resources/images/Guohuai_Leaves.png"
+  );
+
+  const raycaster = new THREE.Raycaster();
+  let pointer = new THREE.Vector2();
+  let c = 0;
+
+  function onPointerDown(event) {
+    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObject(plain, false);
+    console.log(intersects);
+    if (intersects.length > 0) {
+      const p = intersects[0].point;
+      console.log("Done!");
+      c++;
+      if (c < 50) {
+        const tree = builder.build();
+        tree.position.set(p.x, p.y, p.z);
+        scene.add(tree);
+        builder.clear();
+        display([p]);
+      }
     }
-    return vectors;
   }
+  //   const tree = builder.build();
+  //   tree.position.set(-100, 0, -1000);
+  //   scene.add(tree);
+  //   builder.clear();
 
   function display(vectors) {
-    const geometry = new THREE.SphereGeometry(0.1);
+    const geometry = new THREE.SphereGeometry(10);
     const material = new THREE.MeshBasicMaterial({ color: "red" });
     vectors.forEach((vector) => {
       const sphere = new THREE.Mesh(geometry, material);
@@ -133,6 +133,7 @@ function main() {
     render();
   }
   animate();
+  window.addEventListener("pointerdown", onPointerDown);
 }
 
 main();

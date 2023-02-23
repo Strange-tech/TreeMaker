@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { randomRangeLinear, disturbedCurve } from "./utilities";
+import { Leaf } from "./leaf/Leaf";
 /*************************************************************************************
  * CLASS NAME:  TreeBuilder
  * DESCRIPTION: A novel tree editor & generator on the webpage.
@@ -7,12 +8,8 @@ import { randomRangeLinear, disturbedCurve } from "./utilities";
  *
  *************************************************************************************/
 class TreeBuilder {
-  constructor(scene, treeObj, treeBasecolor, leafBasecolor) {
-    this.scene = scene;
+  constructor(treeObj) {
     this.treeObj = treeObj;
-    this.treeBasecolor = treeBasecolor;
-    this.leafBasecolor = leafBasecolor;
-
     this.positions = [];
     this.indices = [];
     this.uvs = [];
@@ -34,16 +31,6 @@ class TreeBuilder {
     this.ndx = 0; // indices下标
   }
 
-  renderPoint(x, y, z) {
-    const { scene } = this;
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 3, 3),
-      new THREE.MeshBasicMaterial({ color: "red" })
-    );
-    sphere.position.set(x, y, z);
-    scene.add(sphere);
-  }
-
   extractPoints(plane, axis, angle) {
     const array = [];
     const localPositions = plane.array; // array of vector3
@@ -61,8 +48,12 @@ class TreeBuilder {
     return [vector.x, vector.y, vector.z];
   }
 
-  makeSidePositions(prevPlanePoints, curPlanePoints) {
+  makeSidePositions(prevPlanePoints, curPlanePoints, segmentId) {
     const l = curPlanePoints.length;
+    let t = 1 / l,
+      s = 1 / this.treeObj.segment,
+      cur = s * segmentId,
+      prev = s * (segmentId - 1);
     for (let i = 0; i < l; i++) {
       let j = (i + 1) % l;
       this.positions.push(
@@ -71,7 +62,18 @@ class TreeBuilder {
         ...this.toArray(prevPlanePoints[i]),
         ...this.toArray(prevPlanePoints[j])
       );
-      this.uvs.push(0, 1, 1, 1, 0, 0, 1, 0);
+      // 每一小段长度是 1/segment
+      this.uvs.push(
+        t * i,
+        cur,
+        t * (i + 1),
+        cur,
+        t * i,
+        prev,
+        t * (i + 1),
+        prev
+      );
+      // this.uvs.push(0, 1, 1, 1, 0, 0, 1, 0);
       this.indices.push(
         this.ndx,
         this.ndx + 2,
@@ -101,18 +103,6 @@ class TreeBuilder {
     this.ndx += 4;
   }
 
-  // getLeafPosition(points) {
-  //   const l = points.length;
-  //   const start = (l * 1) / 3,
-  //     end = l;
-  //   const basePosition = points[Math.floor(randomRangeLinear(start, end))];
-  //   return new THREE.Vector3(
-  //     basePosition.x + (Math.random() * 5 - 2.5) * 5,
-  //     basePosition.y + (Math.random() * 5 - 1.5) * 5,
-  //     basePosition.z + (Math.random() * 5 - 2.5) * 5
-  //   );
-  // }
-
   randomizeMatrix(curve, points) {
     const l = points.length;
     const start = (l * 1) / 10,
@@ -136,7 +126,8 @@ class TreeBuilder {
       basePosition.y,
       basePosition.z
     );
-    const scl = new THREE.Matrix4().makeScale(20, 20, 20);
+    let s = this.treeObj.leaves.scale;
+    const scl = new THREE.Matrix4().makeScale(s, s, s);
 
     const rot1 = new THREE.Matrix4().makeRotationY(Math.random() * 2 * Math.PI), // (0,2pi)
       rot2 = new THREE.Matrix4().makeRotationAxis(rot_axis, rot_angle);
@@ -161,7 +152,6 @@ class TreeBuilder {
     // const branchGeometry = new THREE.BufferGeometry().setFromPoints(points);
     // const branchMaterial = new THREE.LineBasicMaterial({ color: "green" });
     // const branch = new THREE.Line(branchGeometry, branchMaterial);
-    // this.scene.add(branch);
 
     const pointsLength = points.length;
     const segment = this.treeObj.segment; // 树干控制点的个数
@@ -179,6 +169,7 @@ class TreeBuilder {
         }
       }
     }
+    let segmentId = 0;
     // 获取一些枝干控制点
     for (let i = 0; i < pointsLength; i += offset) {
       const controlPoint = points[i];
@@ -211,8 +202,9 @@ class TreeBuilder {
       curPlanePoints = this.extractPoints(plane, cross, angle);
       // console.log(plane);
       if (prevPlanePoints) {
-        this.makeSidePositions(prevPlanePoints, curPlanePoints);
+        this.makeSidePositions(prevPlanePoints, curPlanePoints, segmentId);
       }
+      segmentId++;
       prevPlanePoints = curPlanePoints;
     }
     this.makeTopPositions(curPlanePoints);
@@ -227,30 +219,36 @@ class TreeBuilder {
       branchLength = next_node.length;
     const branchNumber = next_node.number;
     let theta = this.treeObj.angle;
-    for (let i = 0; i < branchNumber; i++) {
-      const base = Math.floor(
-        pointsLength * randomRangeLinear(fork_min, fork_max)
-      );
-      const tan_vector = new THREE.Vector3(),
-        incre_vector = new THREE.Vector3()
-          .randomDirection()
-          .multiplyScalar(Math.sin(theta));
-      curve.getTangent(base / (pointsLength - 1), tan_vector);
-      const dir_vector = new THREE.Vector3()
-        .addVectors(tan_vector, incre_vector)
-        .normalize();
 
+    let base = 0; /*Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max))*/
+    const tan_vector = new THREE.Vector3(),
+      incre_vector = new THREE.Vector3()
+        .randomDirection()
+        .multiplyScalar(Math.sin(theta));
+    curve.getTangent(0.5, tan_vector);
+    let dir_vector = new THREE.Vector3()
+      .addVectors(tan_vector, incre_vector)
+      .normalize();
+
+    for (let i = 0; i < branchNumber; i++) {
+      base = Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max));
+      if (i > 0)
+        dir_vector
+          .applyAxisAngle(tan_vector, (2 * Math.PI) / branchNumber)
+          .normalize();
       const s = points[base];
       let min_length = branchLength.min,
         max_length = branchLength.max;
       let end_point;
-      if (this.convex && depth === this.treeObj.depth - 1) {
+      if (this.convex && depth === this.treeObj.depth - 2) {
         const ray = new THREE.Raycaster(s, dir_vector);
         const target = ray.intersectObject(this.convex, false);
         console.log(target);
         // if (target.length === 0) return; // 直接剪枝剪掉算了
-        if (target[0] && target[0].distance <= max_length)
-          end_point = target[0]?.point;
+        if (target[0] /*&& target[0].distance <= max_length*/) {
+          end_point = target[0].point;
+          this.renderPoint(end_point.x, end_point.y, end_point.z);
+        }
       }
       const e = end_point
         ? end_point
@@ -270,20 +268,25 @@ class TreeBuilder {
 
   // only public method
   build() {
-    const { treeObj, treeBasecolor, leafBasecolor, positions, uvs, indices } =
-      this;
+    const { treeObj, positions, uvs, indices } = this;
 
     const loader = new THREE.TextureLoader();
-    // leaf texture
-    const leafGeometry = new THREE.PlaneGeometry(1, 2, 1, 1);
-    leafGeometry.translate(0, 1, 0);
-    const leafTexture = loader.load(leafBasecolor);
+    const g = treeObj.leaves.geometry;
+    const leafGeometry = new Leaf(
+      g.style,
+      g.width,
+      g.height,
+      g.foldDegree
+    ).generate();
+    // console.log(leafGeometry);
+    const leafTexture = loader.load(treeObj.leafBasecolor);
     const leafMaterial = new THREE.MeshPhongMaterial({
       map: leafTexture,
       side: THREE.DoubleSide,
-      alphaTest: 0.2,
+      alphaTest: 0.5,
       // color: "green",
     });
+
     // leaf是instancedMesh，递归函数要用
     this.leaf = new THREE.InstancedMesh(
       leafGeometry,
@@ -299,7 +302,7 @@ class TreeBuilder {
       treeObj.disturb
     );
     // trunk and branch texture
-    const treeTexture = loader.load(treeBasecolor);
+    const treeTexture = loader.load(treeObj.treeBasecolor);
     const treeGeometry = new THREE.BufferGeometry();
     const treeMaterial = new THREE.MeshStandardMaterial({
       //   wireframe: true,
