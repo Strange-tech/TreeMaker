@@ -19,6 +19,10 @@ class TreeBuilder {
     this.y_axis = new THREE.Vector3(0, 1, 0); // 世界坐标下的y轴
   }
 
+  setTreeObj(treeObj) {
+    this.treeObj = treeObj;
+  }
+
   addConvex(convex) {
     this.convex = convex;
   }
@@ -247,7 +251,6 @@ class TreeBuilder {
         // if (target.length === 0) return; // 直接剪枝剪掉算了
         if (target[0] /*&& target[0].distance <= max_length*/) {
           end_point = target[0].point;
-          this.renderPoint(end_point.x, end_point.y, end_point.z);
         }
       }
       const e = end_point

@@ -30,12 +30,54 @@ function main() {
 
   const treeObj = new CustomizeTree().getTree("红枫");
   const builder = new TreeBuilder(treeObj);
-  const tree = builder.build();
-  scene.add(tree);
-  lookAt(tree);
-  console.log(tree);
-  console.log(builder.getCnt());
-  builder.clear();
+  // const tree = builder.build();
+  // scene.add(tree);
+  // lookAt(tree);
+  // console.log(tree);
+  // console.log(builder.getCnt());
+  // builder.clear();
+  const height = 10;
+  const loader = new PCDLoader();
+  loader.load(
+    "resources/urban3d/cambridge_block_4 - Cloud.pcd",
+    function (points) {
+      points.geometry.center();
+      points.geometry.rotateX(-Math.PI / 2);
+      // scene.add(points);
+      // console.log(points);
+      points.geometry.computeBoundingBox();
+
+      const min_v = points.geometry.boundingBox.min,
+        max_v = points.geometry.boundingBox.max;
+      const bottoms = [
+        new THREE.Vector3(min_v.x, min_v.y - height, min_v.z),
+        new THREE.Vector3(min_v.x, min_v.y - height, max_v.z),
+        new THREE.Vector3(max_v.x, min_v.y - height, min_v.z),
+        new THREE.Vector3(max_v.x, min_v.y - height, max_v.z),
+      ];
+
+      const vectors = extract(points.geometry.attributes.position, 50);
+      vectors.push(...bottoms);
+      const geometry = new ConvexGeometry(vectors);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        side: THREE.BackSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.scale.set(3, 3, 3);
+      mesh.position.set(0, 50, 0);
+      mesh.updateMatrixWorld();
+      scene.add(mesh);
+
+      builder.addConvex(mesh);
+      const tree = builder.build();
+      scene.add(tree);
+      console.log(tree);
+      lookAt(tree);
+      render();
+    }
+  );
 
   function lookAt(obj) {
     // compute the box that contains all the stuff from root and below
