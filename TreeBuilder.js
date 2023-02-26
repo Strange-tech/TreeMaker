@@ -225,15 +225,17 @@ class TreeBuilder {
     let theta = this.treeObj.angle;
 
     let base = 0; /*Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max))*/
-    const tan_vector = new THREE.Vector3(),
+    const tan_vector = new THREE.Vector3();
+    curve.getTangent(0.5, tan_vector);
+    let incre_vector, dir_vector;
+    do {
       incre_vector = new THREE.Vector3()
         .randomDirection()
         .multiplyScalar(Math.sin(theta));
-    curve.getTangent(0.5, tan_vector);
-    let dir_vector = new THREE.Vector3()
-      .addVectors(tan_vector, incre_vector)
-      .normalize();
-
+      dir_vector = new THREE.Vector3()
+        .addVectors(tan_vector, incre_vector)
+        .normalize();
+    } while (tan_vector.angleTo(dir_vector) < theta / 2);
     for (let i = 0; i < branchNumber; i++) {
       base = Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max));
       if (i > 0)

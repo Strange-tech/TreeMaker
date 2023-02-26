@@ -38,7 +38,7 @@ function main() {
   // const axesHelper = new THREE.AxesHelper(1000);
   // scene.add(axesHelper);
 
-  const plainGeometry = new THREE.PlaneGeometry(4000, 2500, 100, 60);
+  const plainGeometry = new THREE.PlaneGeometry(4000, 2500, 50, 30);
   plainGeometry.rotateX(-Math.PI / 2);
   // const textureLoader = new THREE.TextureLoader();
   // const texture = textureLoader.load("resources/images/terrain.png");

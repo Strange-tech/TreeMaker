@@ -133,7 +133,7 @@ class CustomizeTree {
           // root node
           {
             start: new THREE.Vector3(0, 0, 0),
-            end: new THREE.Vector3(0, 40, 0),
+            end: new THREE.Vector3(0, 50, 0),
             radius: 3,
             fork: { min: 0.8, max: 1 },
           },
