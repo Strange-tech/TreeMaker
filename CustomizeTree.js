@@ -27,7 +27,7 @@ class CustomizeTree {
         disturb: 0.1,
         gravity: 0,
         shrink: { single: 0.95, multi: 0.6, root: true },
-        segment: 10,
+        segment: 2,
         angle: Math.PI / 4,
         leaves: {
           geometry: { style: "folded", width: 1, height: 2, foldDegree: 0.3 },
@@ -74,7 +74,7 @@ class CustomizeTree {
         disturb: 0.05,
         gravity: 0,
         shrink: { single: 0.8, multi: 0.5, root: true },
-        segment: 5,
+        segment: 2,
         angle: Math.PI / 4,
         leaves: {
           geometry: { style: "folded", width: 1, height: 1, foldDegree: 0.3 },
@@ -104,7 +104,7 @@ class CustomizeTree {
           {
             number: 3,
             length: { min: 20, max: 30 },
-            fork: { min: 0.1, max: 0.9 },
+            fork: { min: 0.7, max: 0.9 },
           },
           // leaf node
           {
@@ -121,7 +121,7 @@ class CustomizeTree {
         disturb: 0.02,
         gravity: 2,
         shrink: { single: 0.9, multi: 0.5, root: true },
-        segment: 5,
+        segment: 2,
         angle: Math.PI / 3,
         leaves: {
           geometry: { style: "folded", width: 1, height: 1, foldDegree: 0.3 },
@@ -133,14 +133,14 @@ class CustomizeTree {
           // root node
           {
             start: new THREE.Vector3(0, 0, 0),
-            end: new THREE.Vector3(0, 50, 0),
+            end: new THREE.Vector3(0, 60, 0),
             radius: 3,
             fork: { min: 0.8, max: 1 },
           },
           // middle node
           {
             number: 6,
-            length: { min: 25, max: 30 },
+            length: { min: 25, max: 40 },
             fork: { min: 0.8, max: 1 },
           },
           {

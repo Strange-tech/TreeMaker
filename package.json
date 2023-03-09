@@ -10,7 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "three": "^0.147.0"
+    "three": "^0.147.0",
+    "three-mesh-bvh": "^0.5.23"
   },
   "devDependencies": {
     "parcel": "latest"

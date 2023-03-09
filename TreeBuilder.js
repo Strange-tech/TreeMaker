@@ -1,6 +1,8 @@
 import * as THREE from "three";
-import { randomRangeLinear, disturbedCurve } from "./utilities";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { randomRangeLinear, disturbedCurveNode } from "./utilities";
 import { Leaf } from "./leaf/Leaf";
+import { TreeSkeleton } from "./TreeSkeleton";
 /*************************************************************************************
  * CLASS NAME:  TreeBuilder
  * DESCRIPTION: A novel tree editor & generator on the webpage.
@@ -8,7 +10,7 @@ import { Leaf } from "./leaf/Leaf";
  *
  *************************************************************************************/
 class TreeBuilder {
-  constructor(treeObj) {
+  constructor(treeObj, mergeLeaves) {
     this.treeObj = treeObj;
     this.positions = [];
     this.indices = [];
@@ -17,22 +19,32 @@ class TreeBuilder {
     this.ndx = 0; // indices下标
     this.z_axis = new THREE.Vector3(0, 0, 1); // 世界坐标下的z轴
     this.y_axis = new THREE.Vector3(0, 1, 0); // 世界坐标下的y轴
+    this.mergeLeaves = mergeLeaves;
+    if (mergeLeaves) this.matrices = [];
   }
 
-  setTreeObj(treeObj) {
+  init(treeObj, mergeLeaves) {
     this.treeObj = treeObj;
+    this.mergeLeaves = mergeLeaves;
+    if (mergeLeaves) this.matrices = [];
+  }
+
+  setModelPrecision(segment) {
+    this.treeObj.segment = segment;
   }
 
   addConvex(convex) {
     this.convex = convex;
   }
 
-  clear() {
+  clearMesh() {
     this.positions = [];
     this.indices = [];
     this.uvs = [];
     this.cnt = 0; // 叶子计数器
     this.ndx = 0; // indices下标
+    if (this.mergeLeaves) this.matrices = [];
+    this.mergeLeaves = undefined;
   }
 
   extractPoints(plane, axis, angle) {
@@ -132,7 +144,6 @@ class TreeBuilder {
     );
     let s = this.treeObj.leaves.scale;
     const scl = new THREE.Matrix4().makeScale(s, s, s);
-
     const rot1 = new THREE.Matrix4().makeRotationY(Math.random() * 2 * Math.PI), // (0,2pi)
       rot2 = new THREE.Matrix4().makeRotationAxis(rot_axis, rot_angle);
     const rot = new THREE.Matrix4().multiply(rot2).multiply(rot1);
@@ -145,74 +156,19 @@ class TreeBuilder {
     return this.cnt;
   }
 
-  buildTreeRecursive(start, end, radius, depth, disturb) {
+  buildSkeletonRecursively(start, end, depth, disturb, fatherSkeleton) {
     if (depth > this.treeObj.depth) return;
     if (depth === this.treeObj.depth) disturb = 0;
 
-    radius = radius <= 0.1 ? 0.1 : radius;
+    const nodes = disturbedCurveNode(start, end, disturb, this.treeObj.gravity);
+    const curSkeleton = new TreeSkeleton(nodes);
+    fatherSkeleton.add(curSkeleton);
 
-    const curve = disturbedCurve(start, end, disturb, this.treeObj.gravity);
-    const points = curve.getPoints(50);
-    // const branchGeometry = new THREE.BufferGeometry().setFromPoints(points);
-    // const branchMaterial = new THREE.LineBasicMaterial({ color: "green" });
-    // const branch = new THREE.Line(branchGeometry, branchMaterial);
+    const curve = new THREE.CatmullRomCurve3(nodes);
+    const divisionNumber = 50;
+    const points = curve.getPoints(divisionNumber);
 
     const pointsLength = points.length;
-    const segment = this.treeObj.segment; // 树干控制点的个数
-    const offset = Math.floor(pointsLength / segment);
-    let prevPlanePoints, curPlanePoints;
-    let r = radius;
-
-    if (depth === this.treeObj.depth) {
-      const each = this.treeObj.leaves.each,
-        total = this.treeObj.leaves.total;
-      for (let i = 0; i < each; i++, this.cnt++) {
-        if (this.cnt < total) {
-          const matrix = this.randomizeMatrix(curve, points);
-          this.leaf.setMatrixAt(this.cnt, matrix);
-        }
-      }
-    }
-    let segmentId = 0;
-    // 获取一些枝干控制点
-    for (let i = 0; i < pointsLength; i += offset) {
-      const controlPoint = points[i];
-      //   this.renderPoint(controlPoint.x, controlPoint.y, controlPoint.z);
-
-      const tangent = new THREE.Vector3();
-      curve.getTangent(i / (pointsLength - 1), tangent);
-      const angle = tangent.angleTo(this.z_axis); // 弧度
-      // 叉乘得到的向量，作为旋转轴
-      const cross = new THREE.Vector3()
-        .crossVectors(this.z_axis, tangent)
-        .normalize();
-
-      const plane = {
-        position: new THREE.Vector3(
-          controlPoint.x,
-          controlPoint.y,
-          controlPoint.z
-        ),
-        array: [
-          new THREE.Vector3(r, r, 0),
-          new THREE.Vector3(-r, r, 0),
-          new THREE.Vector3(-r, -r, 0),
-          new THREE.Vector3(r, -r, 0),
-        ],
-      };
-      if (depth !== 0 || this.treeObj.shrink.root)
-        r *= this.treeObj.shrink.single;
-
-      curPlanePoints = this.extractPoints(plane, cross, angle);
-      // console.log(plane);
-      if (prevPlanePoints) {
-        this.makeSidePositions(prevPlanePoints, curPlanePoints, segmentId);
-      }
-      segmentId++;
-      prevPlanePoints = curPlanePoints;
-    }
-    this.makeTopPositions(curPlanePoints);
-
     const cur_node = this.treeObj.branches[depth],
       next_node = this.treeObj.branches[depth + 1];
     if (!next_node) return; // 剪了
@@ -224,7 +180,7 @@ class TreeBuilder {
     const branchNumber = next_node.number;
     let theta = this.treeObj.angle;
 
-    let base = 0; /*Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max))*/
+    let base = 0;
     const tan_vector = new THREE.Vector3();
     curve.getTangent(0.5, tan_vector);
     let incre_vector, dir_vector;
@@ -261,29 +217,117 @@ class TreeBuilder {
             s,
             dir_vector.multiplyScalar(randomRangeLinear(min_length, max_length))
           );
-      this.buildTreeRecursive(
-        s,
-        e,
-        radius * this.treeObj.shrink.multi,
-        depth + 1,
-        disturb
-      );
+      this.buildSkeletonRecursively(s, e, depth + 1, disturb, curSkeleton);
     }
   }
 
-  // only public method
-  build() {
-    const { treeObj, positions, uvs, indices } = this;
+  buildTreeRecursively(skeleton, depth, radius) {
+    if (depth > this.treeObj.depth) return;
+
+    radius = radius <= 0.1 ? 0.1 : radius;
+
+    const content = skeleton.content;
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(content[0].x, content[0].y, content[0].z),
+      new THREE.Vector3(content[1].x, content[1].y, content[1].z),
+      new THREE.Vector3(content[2].x, content[2].y, content[2].z),
+    ]);
+    const divisionNumber = 50;
+    const points = curve.getPoints(divisionNumber);
+    const pointsLength = points.length; // pointsLength = divisionNumber + 1
+    const segment = this.treeObj.segment; // 树干分成的段数
+    const offset = Math.floor(divisionNumber / segment);
+    let prevPlanePoints, curPlanePoints;
+    let r = radius;
+
+    if (depth === this.treeObj.depth) {
+      const each = this.treeObj.leaves.each,
+        total = this.treeObj.leaves.total;
+      if (this.mergeLeaves) {
+        for (let i = 0; i < each; i++, this.cnt++) {
+          if (this.cnt < total) {
+            const matrix = this.randomizeMatrix(curve, points);
+            this.matrices.push(matrix);
+          }
+        }
+      } else {
+        for (let i = 0; i < each; i++, this.cnt++) {
+          if (this.cnt < total) {
+            const matrix = this.randomizeMatrix(curve, points);
+            this.leaf.setMatrixAt(this.cnt, matrix);
+          }
+        }
+      }
+    }
+
+    let segmentId = 0;
+    // 获取一些枝干控制点
+    for (let i = 0; i < pointsLength; i += offset) {
+      const controlPoint = points[i];
+      const tangent = new THREE.Vector3();
+      curve.getTangent(i / divisionNumber, tangent);
+      const angle = tangent.angleTo(this.z_axis); // 弧度
+      // 叉乘得到的向量，作为旋转轴
+      const cross = new THREE.Vector3()
+        .crossVectors(this.z_axis, tangent)
+        .normalize();
+
+      const plane = {
+        position: new THREE.Vector3(
+          controlPoint.x,
+          controlPoint.y,
+          controlPoint.z
+        ),
+        array: [
+          new THREE.Vector3(r, r, 0),
+          new THREE.Vector3(-r, r, 0),
+          new THREE.Vector3(-r, -r, 0),
+          new THREE.Vector3(r, -r, 0),
+        ],
+      };
+      if (depth !== 0 || this.treeObj.shrink.root)
+        r *= this.treeObj.shrink.single;
+
+      curPlanePoints = this.extractPoints(plane, cross, angle);
+      if (prevPlanePoints) {
+        this.makeSidePositions(prevPlanePoints, curPlanePoints, segmentId);
+      }
+      segmentId++;
+      prevPlanePoints = curPlanePoints;
+    }
+    this.makeTopPositions(curPlanePoints);
+
+    skeleton.children.forEach((child) => {
+      this.buildTreeRecursively(
+        child,
+        depth + 1,
+        radius * this.treeObj.shrink.multi
+      );
+    });
+  }
+
+  // public
+  buildSkeleton() {
+    const { treeObj } = this;
+    const trunk = treeObj.branches[0];
+    const treeSkeleton = new TreeSkeleton();
+    this.buildSkeletonRecursively(
+      trunk.start,
+      trunk.end,
+      0,
+      treeObj.disturb,
+      treeSkeleton
+    );
+    treeSkeleton.setTreeObj(treeObj);
+    return treeSkeleton;
+  }
+
+  // public
+  buildTree(skeleton) {
+    const { treeObj, positions, uvs, indices, mergeLeaves, matrices } = this;
 
     const loader = new THREE.TextureLoader();
     const g = treeObj.leaves.geometry;
-    const leafGeometry = new Leaf(
-      g.style,
-      g.width,
-      g.height,
-      g.foldDegree
-    ).generate();
-    // console.log(leafGeometry);
     const leafTexture = loader.load(treeObj.leafBasecolor);
     const leafMaterial = new THREE.MeshPhongMaterial({
       map: leafTexture,
@@ -291,22 +335,34 @@ class TreeBuilder {
       alphaTest: 0.5,
       // color: "green",
     });
-
-    // leaf是instancedMesh，递归函数要用
-    this.leaf = new THREE.InstancedMesh(
-      leafGeometry,
-      leafMaterial,
-      treeObj.leaves.total
-    );
+    // 1. 实例化方式做树叶，递归函数前创建mesh
+    if (!mergeLeaves) {
+      this.leaf = new THREE.InstancedMesh(
+        new Leaf(g.style, g.width, g.height, g.foldDegree).generate(),
+        leafMaterial,
+        treeObj.leaves.total
+      );
+    }
+    // 2. 执行递归
     const trunk = treeObj.branches[0];
-    this.buildTreeRecursive(
-      trunk.start,
-      trunk.end,
-      trunk.radius,
-      0,
-      treeObj.disturb
-    );
-    // trunk and branch texture
+    this.buildTreeRecursively(skeleton.children[0], 0, trunk.radius);
+    // 3. 合并方式做树叶，递归函数后创建mesh
+    if (mergeLeaves) {
+      const leafGeometries = [];
+      matrices.forEach((matrix) => {
+        leafGeometries.push(
+          new Leaf(g.style, g.width, g.height, g.foldDegree)
+            .generate()
+            .applyMatrix4(matrix)
+        );
+      });
+      const mergedLeavesGeometry = BufferGeometryUtils.mergeBufferGeometries(
+        leafGeometries,
+        false
+      );
+      this.leaf = new THREE.Mesh(mergedLeavesGeometry, leafMaterial);
+    }
+    // 4. trunk and branch
     const treeTexture = loader.load(treeObj.treeBasecolor);
     const treeGeometry = new THREE.BufferGeometry();
     const treeMaterial = new THREE.MeshStandardMaterial({
@@ -315,7 +371,6 @@ class TreeBuilder {
       map: treeTexture,
       side: THREE.FrontSide,
     });
-
     const positionNumComponents = 3;
     const uvNumComponents = 2;
     const positionAttribute = new THREE.BufferAttribute(
@@ -330,11 +385,10 @@ class TreeBuilder {
     treeGeometry.computeVertexNormals();
     treeGeometry.setAttribute("uv", uvAttribute);
     treeGeometry.setIndex(indices);
-
     const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-    const leaf = this.leaf;
+
     const group = new THREE.Group();
-    group.add(tree, leaf);
+    group.add(tree, this.leaf);
     return group;
   }
 }

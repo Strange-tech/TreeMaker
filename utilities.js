@@ -4,7 +4,7 @@ const randomRangeLinear = function (min, max) {
   return Math.random() * (max - min) + min;
 };
 
-const disturbedCurve = function (start, end, disturb, gravity) {
+const disturbedCurveNode = function (start, end, disturb, gravity) {
   const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
   const d = start.distanceTo(end);
   const l = d * disturb;
@@ -28,7 +28,7 @@ const disturbedCurve = function (start, end, disturb, gravity) {
       )
     );
   }
-  return new THREE.CatmullRomCurve3([start, mid, end]);
+  return [start, mid, end];
 };
 
-export { randomRangeLinear, disturbedCurve };
+export { randomRangeLinear, disturbedCurveNode };
