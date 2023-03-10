@@ -28,7 +28,7 @@ class Leaf {
       z = width * foldDegree;
     const vertices = [-x, 0, z, 0, 0, 0, x, 0, z, x, y, z, 0, y, 0, -x, y, z];
     const uvs = [0, 0, 0.5, 0, 1, 0, 1, 1, 0.5, 1, 0, 1];
-    const normals = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+    const normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
     const indices = [0, 1, 4, 4, 5, 0, 1, 2, 3, 3, 4, 1];
     geometry.setAttribute(
       "position",
@@ -65,7 +65,7 @@ class Leaf {
       0,
     ];
     const uvs = [0, 0, 1, 0, 1, 1, 0, 1];
-    const normals = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
+    const normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
     const indices = [0, 1, 2, 2, 3, 0];
     geometry.setAttribute(
       "position",

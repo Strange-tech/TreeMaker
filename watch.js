@@ -12,6 +12,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
 import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { VertexNormalsHelper } from "three/examples/jsm/helpers/VertexNormalsHelper";
 import { TreeBuilder } from "./TreeBuilder";
 import { CustomizeTree } from "./CustomizeTree";
 
@@ -36,6 +37,9 @@ function main() {
     const intensity = 1;
     const light = new THREE.AmbientLight(color, intensity);
     scene.add(light);
+    const dirlight = new THREE.DirectionalLight(color, intensity / 2);
+    dirlight.position.set(20, 20, 20);
+    scene.add(dirlight);
   }
 
   const controls = new OrbitControls(camera, canvas);
@@ -46,7 +50,7 @@ function main() {
   // THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
   // THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-  const treeObj = new CustomizeTree().getTree("国槐");
+  const treeObj = new CustomizeTree().getTree("法国梧桐");
   const builder = new TreeBuilder(treeObj, false);
   // for (let i = 0; i < 200; i++) {
   // const tree = builder.build();
@@ -69,8 +73,38 @@ function main() {
   console.log(skeleton);
   const tree = builder.buildTree(skeleton);
   scene.add(tree);
+  // const helper = new VertexNormalsHelper(tree.children[0], 1);
+  // scene.add(helper);
   lookAt(tree);
+  console.log(tree);
   builder.clearMesh();
+
+  // class CustomSinCurve extends THREE.Curve {
+  //   constructor(scale = 1) {
+  //     super();
+  //     this.scale = scale;
+  //   }
+  //   getPoint(t, optionalTarget = new THREE.Vector3()) {
+  //     const tx = t * 3 - 1.5;
+  //     const ty = Math.sin(2 * Math.PI * t);
+  //     const tz = 0;
+
+  //     return optionalTarget.set(tx, ty, tz).multiplyScalar(this.scale);
+  //   }
+  // }
+  // const path = new CustomSinCurve(10);
+  // const loader = new THREE.TextureLoader();
+  // const texture = loader.load(treeObj.path + "tree_base.png");
+  // const geometry = new THREE.TubeGeometry(path, 20, 2, 8, false);
+  // const material = new THREE.MeshBasicMaterial({
+  //   // color: 0x00ff00,
+  //   // wireframe: true,
+  //   map: texture,
+  // });
+  // const mesh = new THREE.Mesh(geometry, material);
+  // const helper = new VertexNormalsHelper(mesh, 1);
+  // scene.add(helper);
+  // scene.add(mesh);
 
   // const drawLine = function (skeleton) {
   //   const curve = new THREE.CatmullRomCurve3(skeleton.content);

@@ -31,7 +31,7 @@ class CustomizeTree {
         leaves: {
           geometry: { style: "folded", width: 1, height: 2, foldDegree: 0.3 },
           scale: 20,
-          total: 324,
+          total: 325,
           each: 2,
         },
         branches: [

@@ -42,7 +42,7 @@ function main() {
   const dirLight = new THREE.DirectionalLight(color, intensity);
   dirLight.position.set(loadArea.x - loadArea.w, loadArea.w, loadArea.y);
   dirLight.target.position.set(loadArea.x, 0, loadArea.y);
-  dirLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+  dirLight.shadow.mapSize = new THREE.Vector2(2048, 2048);
   dirLight.shadow.camera.top = loadArea.w;
   dirLight.shadow.camera.right = loadArea.w;
   dirLight.shadow.camera.bottom = -loadArea.w;
@@ -77,17 +77,37 @@ function main() {
   const planeSize = 16000;
   // const axesHelper = new THREE.AxesHelper(1000);
   // scene.add(axesHelper);
+  ("resources/images/terrain.png");
+  const textureManager = function (loader, url) {
+    const texture = loader.load(url);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(16, 16);
+    return texture;
+  };
 
   const plainGeometry = new THREE.PlaneGeometry(planeSize, planeSize, 10, 10);
   plainGeometry.rotateX(-Math.PI / 2);
   const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load("resources/images/terrain.png");
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(16, 16);
+  const colorMap = textureManager(
+    textureLoader,
+    "resources/images/terrain/terrain_base.png"
+  );
+  // const normalMap = textureManager(
+  //   textureLoader,
+  //   "resources/images/terrain/terrain_normal.png"
+  // );
+  // const displaceMap = textureManager(
+  //   textureLoader,
+  //   "resources/images/terrain/terrain_displacement.png"
+  // );
   const plain = new THREE.Mesh(
     plainGeometry,
-    new THREE.MeshLambertMaterial({ map: texture })
+    new THREE.MeshLambertMaterial({
+      map: colorMap,
+      // normalMap: normalMap,
+      // displacementMap: displaceMap,
+    })
   );
   plain.receiveShadow = true;
   // const pointsGeometry = plainGeometry.clone();
@@ -276,6 +296,8 @@ function main() {
       camera.position.add(getSideVector().multiplyScalar(-speedDelta));
     if (keyStates["KeyD"])
       camera.position.add(getSideVector().multiplyScalar(speedDelta));
+    if (keyStates["ArrowUp"]) camera.position.y += 2;
+    if (keyStates["ArrowDown"]) camera.position.y -= 2;
     move(visionArea);
     if (reachSide(visionArea, loadArea)) {
       console.log("reach side");
@@ -335,14 +357,12 @@ function main() {
     render();
   }
   animate();
-  document.addEventListener(
-    "keydown",
-    (event) => (keyStates[event.code] = true)
-  );
-  document.addEventListener(
-    "keyup",
-    (event) => (keyStates[event.code] = false)
-  );
+  document.addEventListener("keydown", (event) => {
+    keyStates[event.code] = true;
+  });
+  document.addEventListener("keyup", (event) => {
+    keyStates[event.code] = false;
+  });
   document.body.addEventListener("mousemove", (event) => {
     if (document.pointerLockElement === document.body) {
       camera.rotation.y -= event.movementX / 500;
