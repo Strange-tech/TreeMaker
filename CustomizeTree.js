@@ -21,8 +21,7 @@ class CustomizeTree {
     this.content = [
       {
         name: "法国梧桐",
-        treeBasecolor: "resources/images/Tree_Basecolor.png",
-        leafBasecolor: "resources/images/Tree10_leaf_Basecolor.png",
+        path: "resources/images/fgwt/",
         depth: 4,
         disturb: 0.1,
         gravity: 0,
@@ -39,7 +38,7 @@ class CustomizeTree {
           // root node
           {
             start: new THREE.Vector3(0, 0, 0),
-            end: new THREE.Vector3(0, 20, 0),
+            end: new THREE.Vector3(0, 30, 0),
             radius: 4,
             fork: { min: 0.4, max: 0.9 },
           },
@@ -68,8 +67,7 @@ class CustomizeTree {
       },
       {
         name: "桂花",
-        treeBasecolor: "resources/images/Guihua_tree.jpg",
-        leafBasecolor: "resources/images/Guihua_leaves.png",
+        path: "resources/images/guihua/",
         depth: 4,
         disturb: 0.05,
         gravity: 0,
@@ -115,8 +113,7 @@ class CustomizeTree {
       },
       {
         name: "国槐",
-        treeBasecolor: "resources/images/Guohuai_tree.jpg",
-        leafBasecolor: "resources/images/Guohuai_leaves.png",
+        path: "resources/images/guohuai/",
         depth: 5,
         disturb: 0.02,
         gravity: 2,
@@ -124,8 +121,8 @@ class CustomizeTree {
         segment: 2,
         angle: Math.PI / 3,
         leaves: {
-          geometry: { style: "folded", width: 1, height: 1, foldDegree: 0.3 },
-          scale: 4,
+          geometry: { style: "folded", width: 0.5, height: 1, foldDegree: 0.3 },
+          scale: 5,
           total: 4860,
           each: 5,
         },
@@ -134,13 +131,13 @@ class CustomizeTree {
           {
             start: new THREE.Vector3(0, 0, 0),
             end: new THREE.Vector3(0, 60, 0),
-            radius: 3,
+            radius: 4,
             fork: { min: 0.8, max: 1 },
           },
           // middle node
           {
             number: 6,
-            length: { min: 25, max: 40 },
+            length: { min: 35, max: 40 },
             fork: { min: 0.8, max: 1 },
           },
           {
@@ -253,8 +250,7 @@ class CustomizeTree {
       },
       {
         name: "红枫",
-        treeBasecolor: "resources/images/Guihua_tree.jpg",
-        leafBasecolor: "resources/images/Hongfeng_leaves.png",
+        path: "resources/images/hongfeng/",
         depth: 4,
         disturb: 0.05,
         gravity: -2,

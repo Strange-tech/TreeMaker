@@ -14,7 +14,7 @@ function main() {
   const canvas = document.querySelector("#c");
   const renderer = new THREE.WebGLRenderer({ canvas: canvas });
   // renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.setClearColor(0xffffff, 1.0);
+  renderer.shadowMap.enabled = true;
 
   const scene = new THREE.Scene();
 
@@ -27,11 +27,44 @@ function main() {
   camera.position.set(0, 70, 0);
   camera.lookAt(1000, 0, 0);
 
+  const startX = camera.position.x,
+    startZ = camera.position.z,
+    visionR = far,
+    loadR = 4000;
+
+  const visionArea = new Rectangle(startX, startZ, visionR, visionR);
+  const loadArea = new Rectangle(startX, startZ, loadR, loadR);
+
+  const color = 0xffffff;
+  const intensity = 1;
+  const amLight = new THREE.AmbientLight(color, intensity / 2);
+  scene.add(amLight);
+  const dirLight = new THREE.DirectionalLight(color, intensity);
+  dirLight.position.set(loadArea.x - loadArea.w, loadArea.w, loadArea.y);
+  dirLight.target.position.set(loadArea.x, 0, loadArea.y);
+  dirLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+  dirLight.shadow.camera.top = loadArea.w;
+  dirLight.shadow.camera.right = loadArea.w;
+  dirLight.shadow.camera.bottom = -loadArea.w;
+  dirLight.shadow.camera.left = -loadArea.w;
+  dirLight.shadow.camera.near = loadArea.w / 5;
+  dirLight.shadow.camera.far = loadArea.w * 2.4;
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // SKY BOX
   {
-    const color = 0xffffff;
-    const intensity = 1;
-    const light = new THREE.AmbientLight(color, intensity);
-    scene.add(light);
+    const skyboxLoader = new THREE.CubeTextureLoader();
+    const skyboxTexture = skyboxLoader.load([
+      "resources/images/sky box/right.jpg",
+      "resources/images/sky box/left.jpg",
+      "resources/images/sky box/top.jpg",
+      "resources/images/sky box/bottom.jpg",
+      "resources/images/sky box/front.jpg",
+      "resources/images/sky box/back.jpg",
+    ]);
+    scene.background = skyboxTexture;
   }
 
   // const controls = new OrbitControls(camera, canvas);
@@ -54,12 +87,9 @@ function main() {
   texture.repeat.set(16, 16);
   const plain = new THREE.Mesh(
     plainGeometry,
-    new THREE.MeshPhongMaterial({
-      map: texture,
-      // wireframe: true,
-      // color: "black",
-    })
+    new THREE.MeshLambertMaterial({ map: texture })
   );
+  plain.receiveShadow = true;
   // const pointsGeometry = plainGeometry.clone();
   // const plainPosAttribute = plainGeometry.attributes.position,
   // pointsPosAttribute = pointsGeometry.attributes.position;
@@ -140,8 +170,8 @@ function main() {
 
   // 模拟从服务器发送来的数据
   console.time("testTime1");
-  for (let i = 0; i < 8; i++) {
-    treeObj = customizeTree.getTree(names[Math.floor(i / 2)]);
+  for (let i = 0; i < 12; i++) {
+    treeObj = customizeTree.getTree(names[Math.floor(i / 3)]);
     builder.init(treeObj, false);
     skeletons.push(builder.buildSkeleton());
   }
@@ -152,7 +182,7 @@ function main() {
   skeletons.forEach((skeleton) => {
     builder.init(skeleton.treeObj, true);
     const tree = builder.buildTree(skeleton);
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 300; i++) {
       const clone = tree.clone();
       const p = new THREE.Vector3(
         Math.random() * planeSize - planeSize / 2,
@@ -167,19 +197,28 @@ function main() {
   console.timeEnd("testTime2");
 
   // 场景管理与资源释放
-  const draw = function (rec, color) {
-    const field = new THREE.Mesh(
-      new THREE.PlaneGeometry(rec.w * 2, rec.h * 2),
-      new THREE.MeshBasicMaterial({ color: color, wireframe: true })
-    );
-    field.rotateX(-Math.PI / 2);
-    field.position.set(rec.x, 0, rec.y);
-    scene.add(field);
-    return field;
-  };
+  let found = [],
+    shadowFound = [],
+    prevFound = [],
+    prevShadowFound = [];
   const move = function (rec) {
     rec.x = camera.position.x;
     rec.y = camera.position.z;
+    quadTree.query(rec, shadowFound);
+    shadowFound.forEach((p) => {
+      if (!prevShadowFound.includes(p))
+        p.obj.children.forEach((child) => {
+          child.castShadow = true;
+        });
+    });
+    prevShadowFound.forEach((p) => {
+      if (!shadowFound.includes(p))
+        p.obj.children.forEach((child) => {
+          child.castShadow = false;
+        });
+    });
+    prevShadowFound = shadowFound.slice();
+    shadowFound = [];
   };
   const approximatelyEqual = function (a, b) {
     return Math.abs(a - b) < 20;
@@ -194,10 +233,9 @@ function main() {
       return true;
     else return false;
   };
-  let found = [],
-    prevFound = [];
-  const manageScene = function () {
-    quadTree.query(loadArea, found);
+
+  const manageScene = function (rec, light) {
+    quadTree.query(rec, found);
     found.forEach((p) => {
       if (!prevFound.includes(p)) scene.add(p.obj);
     });
@@ -207,15 +245,11 @@ function main() {
     prevFound = found.slice();
     console.log(found.length);
     found = [];
+    light.position.set(rec.x - rec.w, rec.w, rec.y);
+    light.target.position.set(rec.x, 0, rec.y);
   };
 
-  const startX = camera.position.x,
-    startZ = camera.position.z,
-    visionR = far,
-    loadR = 4000;
-  const visionArea = new Rectangle(startX, startZ, visionR, visionR);
-  const loadArea = new Rectangle(startX, startZ, loadR, loadR);
-  manageScene();
+  manageScene(loadArea, dirLight);
 
   function getForwardVector() {
     camera.getWorldDirection(playerDirection);
@@ -247,7 +281,7 @@ function main() {
       console.log("reach side");
       loadArea.x = visionArea.x;
       loadArea.y = visionArea.y;
-      manageScene();
+      manageScene(loadArea, dirLight);
     }
   }
 
@@ -273,16 +307,6 @@ function main() {
   const gui = new GUI();
   gui.add(guiobj, "save");
 
-  function display(vectors) {
-    const geometry = new THREE.SphereGeometry(10);
-    const material = new THREE.MeshBasicMaterial({ color: "red" });
-    vectors.forEach((vector) => {
-      const sphere = new THREE.Mesh(geometry, material);
-      sphere.position.set(vector.x, vector.y, vector.z);
-      scene.add(sphere);
-    });
-  }
-
   function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
     const pixelRatio = window.devicePixelRatio;
@@ -302,15 +326,6 @@ function main() {
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
     }
-    // if (visionArea.x < 1000) {
-    //   move(visionArea, visionMesh);
-    //   if (reachSide(visionArea, loadArea)) {
-    //     loadMesh.position.copy(visionMesh.position);
-    //     loadArea.x = visionArea.x;
-    //     loadArea.y = visionArea.y;
-    //     printFound();
-    //   }
-    // }
     movement();
     renderer.render(scene, camera);
   }

@@ -31,6 +31,13 @@ function main() {
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 10, 0);
 
+  {
+    const color = 0xffffff;
+    const intensity = 1;
+    const light = new THREE.AmbientLight(color, intensity);
+    scene.add(light);
+  }
+
   const controls = new OrbitControls(camera, canvas);
   controls.target.set(0, 10, 0);
   controls.update();
@@ -39,7 +46,7 @@ function main() {
   // THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
   // THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-  const treeObj = new CustomizeTree().getTree("法国梧桐");
+  const treeObj = new CustomizeTree().getTree("国槐");
   const builder = new TreeBuilder(treeObj, false);
   // for (let i = 0; i < 200; i++) {
   // const tree = builder.build();
@@ -60,11 +67,11 @@ function main() {
 
   const skeleton = builder.buildSkeleton();
   console.log(skeleton);
-  // const position = new THREE.Vector3(0, 0, 0);
-  const tree = builder.buildTree(skeleton.children[0]);
+  const tree = builder.buildTree(skeleton);
+  scene.add(tree);
+  lookAt(tree);
+  builder.clearMesh();
 
-  builder.clear();
-  // const curves = [];
   // const drawLine = function (skeleton) {
   //   const curve = new THREE.CatmullRomCurve3(skeleton.content);
   //   const points = curve.getPoints(10);
@@ -72,7 +79,6 @@ function main() {
   //   const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
   //   const curveObject = new THREE.Line(geometry, material);
   //   scene.add(curveObject);
-  //   curves.push(curveObject);
   //   skeleton.children.forEach((child) => {
   //     drawLine(child);
   //   });
@@ -195,35 +201,6 @@ function main() {
     camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
   }
 
-  {
-    const color = 0xffffff;
-    const intensity = 1;
-    const light = new THREE.AmbientLight(color, intensity);
-    scene.add(light);
-  }
-
-  function extract(positions, num) {
-    const array = positions.array;
-    const count = positions.count;
-    const offset = Math.floor(count / (num - 1));
-    const vectors = [];
-    for (let i = 0; i < count; i += offset) {
-      let j = i * 3;
-      vectors.push(new THREE.Vector3(array[j], array[j + 1], array[j + 2]));
-    }
-    return vectors;
-  }
-
-  function display(vectors) {
-    const geometry = new THREE.SphereGeometry(0.1);
-    const material = new THREE.MeshBasicMaterial({ color: "red" });
-    vectors.forEach((vector) => {
-      const sphere = new THREE.Mesh(geometry, material);
-      sphere.position.set(vector.x, vector.y, vector.z);
-      scene.add(sphere);
-    });
-  }
-
   function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
     const pixelRatio = window.devicePixelRatio;
@@ -243,12 +220,6 @@ function main() {
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
     }
-    // raycaster.setFromCamera(pointer, camera);
-    // const intersects = raycaster.intersectObjects(curves, false);
-    // if (intersects.length > 0) {
-    //   intersects[0].object.material.color.set("green");
-    // }
-
     renderer.render(scene, camera);
   }
 
@@ -257,7 +228,6 @@ function main() {
     render();
   }
   animate();
-  // window.addEventListener("mousemove", onPointerMove);
 }
 
 main();

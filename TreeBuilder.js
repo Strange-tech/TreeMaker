@@ -89,7 +89,6 @@ class TreeBuilder {
         t * (i + 1),
         prev
       );
-      // this.uvs.push(0, 1, 1, 1, 0, 0, 1, 0);
       this.indices.push(
         this.ndx,
         this.ndx + 2,
@@ -126,7 +125,9 @@ class TreeBuilder {
     const base = Math.floor(randomRangeLinear(start, end));
     const basePosition = points[base];
     const tan_vector = new THREE.Vector3(),
-      incre_vector = new THREE.Vector3().randomDirection();
+      incre_vector = new THREE.Vector3()
+        .randomDirection()
+        .multiplyScalar(Math.sin(this.treeObj.angle));
     curve.getTangent(base / (l - 1), tan_vector);
     const dir_vector = new THREE.Vector3()
       .addVectors(tan_vector, incre_vector)
@@ -191,7 +192,7 @@ class TreeBuilder {
       dir_vector = new THREE.Vector3()
         .addVectors(tan_vector, incre_vector)
         .normalize();
-    } while (tan_vector.angleTo(dir_vector) < theta / 2);
+    } while (tan_vector.angleTo(dir_vector) < theta / 2); // 让树枝尽量的散开，不要挤在一起
     for (let i = 0; i < branchNumber; i++) {
       base = Math.floor(pointsLength * randomRangeLinear(fork_min, fork_max));
       if (i > 0)
@@ -328,8 +329,8 @@ class TreeBuilder {
 
     const loader = new THREE.TextureLoader();
     const g = treeObj.leaves.geometry;
-    const leafTexture = loader.load(treeObj.leafBasecolor);
-    const leafMaterial = new THREE.MeshPhongMaterial({
+    const leafTexture = loader.load(treeObj.path + "leaf_base.png");
+    const leafMaterial = new THREE.MeshLambertMaterial({
       map: leafTexture,
       side: THREE.DoubleSide,
       alphaTest: 0.5,
@@ -363,12 +364,12 @@ class TreeBuilder {
       this.leaf = new THREE.Mesh(mergedLeavesGeometry, leafMaterial);
     }
     // 4. trunk and branch
-    const treeTexture = loader.load(treeObj.treeBasecolor);
     const treeGeometry = new THREE.BufferGeometry();
-    const treeMaterial = new THREE.MeshStandardMaterial({
+    const treeMaterial = new THREE.MeshLambertMaterial({
       //   wireframe: true,
       //   color: "black",
-      map: treeTexture,
+      map: loader.load(treeObj.path + "tree_base.png"),
+      // normalMap: loader.load(treeObj.path + "tree_normal.png"),
       side: THREE.FrontSide,
     });
     const positionNumComponents = 3;

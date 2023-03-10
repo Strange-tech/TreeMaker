@@ -7,7 +7,7 @@ class TreeSkeleton {
     this.children.push(child);
   }
   setTreeObj(treeObj) {
-    this.treeObj = Object.assign({}, treeObj);
+    this.treeObj = treeObj;
   }
 }
 export { TreeSkeleton };
