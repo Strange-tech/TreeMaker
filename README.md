@@ -82,6 +82,23 @@ Taking Sycamore as an example, its features are stored in objects in JS, express
 },
 ```
 
+Assuming that the user wants to use these features to generate a visualized sycamore tree, the following operations are performed inside the code:
+
+1. Generate a skeleton through parametric features. There are 2 ways to store skeletons: "keypoints" and "curves". The "keypoint" notation is used for json storage, which keeps the data size as small as possible; the "curve" notation is used to build the geometry of the tree in memory.
+2. Users can store skeletons in json files, or build tree models directly in memory.
+3. Read json in file or the skeleton in memory and use BranchGeometry inherited from THREE.TubeGeometry to build the complete geometry recursively.
+4. Combine geometry, material, texture and other information into mesh, that's it.
+
+The above is the construction process of a SINGLE tree.
+
+----------------------------------------------------2023.3.11 Update ----------------------------------------------------
+
+Using the construction method of a single tree multiple times can easily create a larger-scale scene. I have updated the demo by using scene management ideas such as frustum culling and local priority loading, as follows:
+
+- The perspective has been changed from the God's perspective to the first-person perspective. On the one hand, the user experience is better. On the other hand, it is convenient to add scene management methods.
+- Quadtree manages loading range and shadow rendering range. The loading range is larger than the shadow rendering range, and models outside the range can be disposed if necessary.
+- Added branch and leaf's normal maps to enhance realism.
+
 ## 简介
 
 如题，本项目制作了一款树木生成器，用来在线生成树木模型，并支持输出到 json 文件持久化存储 💿
