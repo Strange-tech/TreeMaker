@@ -1,6 +1,6 @@
 class TreeSkeleton {
   constructor(array) {
-    this.content = array?.map((el) => el.ceil());
+    this.content = /*array?.map((el) => el.ceil())*/ array;
     this.children = [];
   }
   add(child) {

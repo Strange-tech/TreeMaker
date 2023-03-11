@@ -3,6 +3,7 @@ import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUti
 import { randomRangeLinear, disturbedCurveNode } from "./utilities";
 import { Leaf } from "./leaf/Leaf";
 import { TreeSkeleton } from "./TreeSkeleton";
+import { BranchGeometry } from "./BranchGeometry";
 /*************************************************************************************
  * CLASS NAME:  TreeBuilder
  * DESCRIPTION: A novel tree editor & generator on the webpage.
@@ -191,8 +192,15 @@ class TreeBuilder {
         }
       }
     }
-    const tubeGeometry = new THREE.TubeGeometry(curve, segment, radius, 5);
-    this.branchGeometries.push(tubeGeometry);
+    const branchGeometry = new BranchGeometry(
+      curve,
+      segment,
+      radius,
+      5,
+      false,
+      this.treeObj.shrink.single
+    );
+    this.branchGeometries.push(branchGeometry);
     skeleton.children.forEach((child) => {
       this.buildTreeRecursively(
         child,

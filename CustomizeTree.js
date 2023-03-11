@@ -255,7 +255,7 @@ class CustomizeTree {
         disturb: 0.05,
         gravity: -2,
         shrink: { single: 0.85, multi: 0.45, root: true },
-        segment: 10,
+        segment: 5,
         angle: Math.PI / 4,
         leaves: {
           geometry: { style: "classic", width: 1, height: 1, foldDegree: 0 },
@@ -267,9 +267,9 @@ class CustomizeTree {
           // root node
           {
             start: new THREE.Vector3(0, 0, 0),
-            end: new THREE.Vector3(0, 40, 0),
+            end: new THREE.Vector3(0, 30, 0),
             radius: 1.5,
-            fork: { min: 0.4, max: 0.8 },
+            fork: { min: 0.7, max: 0.9 },
           },
           // middle node
           {
