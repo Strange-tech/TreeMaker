@@ -3,12 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <title>My first three.js app</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css" defer />
+    <script type="module" src="birmingham.js" defer>
+      // Our Javascript will go here.
+    </script>
   </head>
   <body>
     <canvas id="c"></canvas>
-    <script type="module" src="birmingham.js">
-      // Our Javascript will go here.
-    </script>
+    <!-- <div class="container">
+      <div id="bar" style="width: 0%">0%</div>
+    </div> -->
   </body>
 </html>

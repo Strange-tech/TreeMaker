@@ -72,12 +72,12 @@ function main() {
   const skeleton = builder.buildSkeleton();
   console.log(skeleton);
   const tree = builder.buildTree(skeleton);
-  scene.add(tree);
+  // scene.add(tree);
   // const helper = new VertexNormalsHelper(tree.children[0], 1);
   // scene.add(helper);
-  lookAt(tree);
-  console.log(tree);
-  builder.clearMesh();
+  // lookAt(tree);
+  // console.log(tree);
+  // builder.clearMesh();
 
   // class CustomSinCurve extends THREE.Curve {
   //   constructor(scale = 1) {
@@ -106,18 +106,18 @@ function main() {
   // scene.add(helper);
   // scene.add(mesh);
 
-  // const drawLine = function (skeleton) {
-  //   const curve = new THREE.CatmullRomCurve3(skeleton.content);
-  //   const points = curve.getPoints(10);
-  //   const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  //   const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  //   const curveObject = new THREE.Line(geometry, material);
-  //   scene.add(curveObject);
-  //   skeleton.children.forEach((child) => {
-  //     drawLine(child);
-  //   });
-  // };
-  // drawLine(skeleton.children[0]);
+  const drawLine = function (skeleton) {
+    const curve = new THREE.CatmullRomCurve3(skeleton.content);
+    const points = curve.getPoints(10);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+    const curveObject = new THREE.Line(geometry, material);
+    scene.add(curveObject);
+    skeleton.children.forEach((child) => {
+      drawLine(child);
+    });
+  };
+  drawLine(skeleton.children[0]);
 
   // fetch("resources/scene/treeSkeleton/skeleton.json")
   //   .then((response) => response.json())

@@ -233,8 +233,8 @@ class TreeBuilder {
     const loader = new THREE.TextureLoader();
     const g = treeObj.leaves.geometry;
     const leafMaterial = new THREE.MeshLambertMaterial({
-      map: loader.load(treeObj.path + "leaf_base.png"),
-      normalMap: loader.load(treeObj.path + "leaf_normal.png"),
+      map: loader.load(treeObj.path + "leaf_base_standard.png"),
+      normalMap: loader.load(treeObj.path + "leaf_normal_standard.png"),
       side: THREE.DoubleSide,
       alphaTest: 0.5,
     });
@@ -270,8 +270,10 @@ class TreeBuilder {
       branchGeometries,
       false
     );
-    const treeTexture = loader.load(treeObj.path + "tree_base.png");
-    const treeNormalTexture = loader.load(treeObj.path + "tree_normal.png");
+    const treeTexture = loader.load(treeObj.path + "tree_base_standard.png");
+    const treeNormalTexture = loader.load(
+      treeObj.path + "tree_normal_standard.png"
+    );
     treeTexture.wrapS = treeNormalTexture.wrapS = THREE.RepeatWrapping;
     treeTexture.repeat.set(2, 1);
     treeNormalTexture.repeat.set(2, 1);

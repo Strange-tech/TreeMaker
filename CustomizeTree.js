@@ -71,7 +71,7 @@ class CustomizeTree {
         depth: 4,
         disturb: 0.05,
         gravity: 0,
-        shrink: { single: 0.8, multi: 0.5, root: true },
+        shrink: { single: 0.6, multi: 0.5, root: true },
         segment: 2,
         angle: Math.PI / 4,
         leaves: {
@@ -85,7 +85,7 @@ class CustomizeTree {
           {
             start: new THREE.Vector3(0, 0, 0),
             end: new THREE.Vector3(0, 100, 0),
-            radius: 3,
+            radius: 4,
             fork: { min: 0.2, max: 0.9 },
           },
           // middle node
@@ -117,7 +117,7 @@ class CustomizeTree {
         depth: 5,
         disturb: 0.02,
         gravity: 2,
-        shrink: { single: 0.9, multi: 0.5, root: true },
+        shrink: { single: 0.8, multi: 0.5, root: true },
         segment: 2,
         angle: Math.PI / 3,
         leaves: {

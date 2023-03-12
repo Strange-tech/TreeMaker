@@ -77,7 +77,6 @@ function main() {
   const planeSize = 16000;
   // const axesHelper = new THREE.AxesHelper(1000);
   // scene.add(axesHelper);
-  ("resources/images/terrain.png");
   const textureManager = function (loader, url) {
     const texture = loader.load(url);
     texture.wrapS = THREE.RepeatWrapping;
@@ -91,22 +90,22 @@ function main() {
   const textureLoader = new THREE.TextureLoader();
   const colorMap = textureManager(
     textureLoader,
-    "resources/images/terrain/terrain_base.png"
+    "resources/images/terrain/terrain_base_standard.png"
   );
   // const normalMap = textureManager(
   //   textureLoader,
-  //   "resources/images/terrain/terrain_normal.png"
+  //   "resources/images/terrain/terrain_normal_standard.png"
   // );
-  // const displaceMap = textureManager(
-  //   textureLoader,
-  //   "resources/images/terrain/terrain_displacement.png"
-  // );
+  const displaceMap = textureManager(
+    textureLoader,
+    "resources/images/terrain/terrain_displace_standard.png"
+  );
   const plain = new THREE.Mesh(
     plainGeometry,
     new THREE.MeshLambertMaterial({
       map: colorMap,
       // normalMap: normalMap,
-      // displacementMap: displaceMap,
+      displacementMap: displaceMap,
     })
   );
   plain.receiveShadow = true;
@@ -253,7 +252,6 @@ function main() {
       return true;
     else return false;
   };
-
   const manageScene = function (rec, light) {
     quadTree.query(rec, found);
     found.forEach((p) => {
@@ -357,6 +355,7 @@ function main() {
     render();
   }
   animate();
+
   document.addEventListener("keydown", (event) => {
     keyStates[event.code] = true;
   });
@@ -369,9 +368,9 @@ function main() {
       camera.rotation.x -= event.movementY / 500;
     }
   });
-  canvas.addEventListener("mousedown", () =>
-    document.body.requestPointerLock()
-  );
+  canvas.addEventListener("mousedown", () => {
+    document.body.requestPointerLock();
+  });
 }
 
 main();
